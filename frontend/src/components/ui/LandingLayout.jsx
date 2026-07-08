@@ -275,7 +275,7 @@ export const Footer = () => {
   return (
     <footer className="bg-inverse-surface w-full py-section-gap text-background mt-auto border-t border-outline-variant/10">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter max-w-[1280px] mx-auto px-margin-mobile md:px-margin-desktop">
-        <div className="md:col-span-4">
+        <div className="md:col-span-6">
           <div className="flex items-center gap-3 cursor-pointer active:scale-95 transition-transform mb-6" onClick={() => navigate('/')}>
             <svg viewBox="0 0 100 100" className="w-8 h-8 flex-shrink-0" aria-label="Journeys Logo" role="img">
               <circle cx="50" cy="50" r="50" fill="#0B1226" />
@@ -294,7 +294,7 @@ export const Footer = () => {
             Crafting modern, feature-rich tools for the timeless spirit of travel and exploration.
           </p>
         </div>
-        <div className="md:col-span-2">
+        <div className="md:col-span-3">
           <h4 className="font-label-caps text-background font-bold mb-6 text-xs uppercase tracking-widest text-[#ffa630]">Company</h4>
           <ul className="space-y-4 text-xs font-semibold uppercase tracking-wider text-background/60">
             <li><Link to="/explore" className="text-background/70 hover:text-background transition-colors">About Us</Link></li>
@@ -302,26 +302,13 @@ export const Footer = () => {
             <li><Link to="/explore" className="text-background/70 hover:text-background transition-colors">Careers</Link></li>
           </ul>
         </div>
-        <div className="md:col-span-2">
+        <div className="md:col-span-3">
           <h4 className="font-label-caps text-background font-bold mb-6 text-xs uppercase tracking-widest text-[#ffa630]">Support</h4>
           <ul className="space-y-4 text-xs font-semibold uppercase tracking-wider text-background/60">
             <li><Link to="/help" className="text-background/70 hover:text-background transition-colors">Help Center</Link></li>
             <li><Link to="/explore" className="text-background/70 hover:text-background transition-colors">Privacy Policy</Link></li>
             <li><Link to="/explore" className="text-background/70 hover:text-background transition-colors">Terms of Service</Link></li>
           </ul>
-        </div>
-        <div className="md:col-span-4">
-          <h4 className="font-label-caps text-background font-bold mb-6 text-xs uppercase tracking-widest text-[#ffa630]">Newsletter</h4>
-          <div className="flex gap-2">
-            <input 
-              type="email" 
-              placeholder="Email address" 
-              className="bg-background/10 border border-background/20 px-4 py-3 rounded-lg text-sm text-background placeholder:text-background/50 focus:outline-none focus:border-primary-container flex-grow" 
-            />
-            <button className="bg-primary-container text-on-primary-container px-4 py-3 rounded-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer">
-              <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </button>
-          </div>
         </div>
       </div>
       <div className="border-t border-background/10 mt-16 pt-8 text-center text-xs text-background/50">

@@ -101,7 +101,7 @@ const WishlistPage = () => {
         {/* Input Form Card */}
         <form onSubmit={handleBookmark} className="bg-white rounded-2xl p-8 border border-[#E5DED4] shadow-sm space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
-            <div className="lg:col-span-4 flex flex-col gap-1.5">
+            <div className="lg:col-span-3 flex flex-col gap-1.5">
               <label className="font-label-caps text-[10px] text-outline uppercase tracking-wider">Destination</label>
               <input
                 type="text"
@@ -155,12 +155,13 @@ const WishlistPage = () => {
                 <option value="high">High</option>
               </select>
             </div>
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-2">
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full h-12 bg-[#ffa630] text-[#0B1226] font-bold rounded-xl hover:brightness-105 active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                className="w-full h-12 bg-[#ffa630] text-[#0B1226] font-bold rounded-xl hover:brightness-105 active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider font-label-caps"
               >
+                <span className="material-symbols-outlined text-sm font-bold">bookmark</span>
                 {submitting ? '...' : 'Bookmark'}
               </button>
             </div>

@@ -64,4 +64,29 @@ router.patch('/read-all', requireAuth, async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════
+// POST /api/notifications — Create a new notification for the user
+// ═══════════════════════════════════════════════════════════════
+
+router.post('/', requireAuth, async (req, res) => {
+  try {
+    const { type, message, relatedItineraryId, priority, category } = req.body;
+    if (!type || !message) {
+      return res.status(400).json({ error: 'Type and message are required' });
+    }
+    const notification = await Notification.create({
+      userId: req.user._id,
+      type,
+      message,
+      relatedItineraryId: relatedItineraryId || null,
+      priority: priority || 'normal',
+      category: category || 'system'
+    });
+    return res.status(201).json({ notification });
+  } catch (error) {
+    console.error('Create notification error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

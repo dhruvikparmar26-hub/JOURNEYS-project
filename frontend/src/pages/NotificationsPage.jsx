@@ -113,7 +113,7 @@ const NotificationsPage = () => {
                   <span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a] flex-shrink-0 mt-1.5 animate-pulse" />
                 )}
                 <div className="flex-1 space-y-1">
-                  <p className={`text-sm leading-relaxed ${!n.read ? 'font-semibold text-[#0B1226]' : 'text-on-surface-variant'}`}>
+                  <p className={`text-sm leading-relaxed whitespace-pre-wrap ${!n.read ? 'font-semibold text-[#0B1226]' : 'text-on-surface-variant'}`}>
                     {n.message}
                   </p>
                   <span className="text-[10px] font-bold text-outline-variant font-label-caps block tracking-wide">

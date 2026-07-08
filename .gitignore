@@ -15,14 +15,22 @@ frontend/dist
 dist
 build
 dist-ssr
-
-# Local env files
+node_modules/
 .env
 .env.*
+
+# Local env files
 backend/.env
 backend/.env.*
 frontend/.env
 frontend/.env.*
+
+# Archives and packages
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
 
 # Editor and OS files
 .vscode/*

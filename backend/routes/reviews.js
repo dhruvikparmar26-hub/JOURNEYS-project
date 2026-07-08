@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import Review from '../models/Review.js';
 import Itinerary from '../models/Itinerary.js';
+import Destination from '../models/Destination.js';
 import Notification from '../models/Notification.js';
 import requireAuth from '../middleware/requireAuth.js';
 
@@ -21,6 +22,10 @@ const reviewSchema = z.object({
   comment: z.string().max(3000).optional(),
   photos: z.array(z.string()).optional(),
   isPublic: z.boolean().optional(),
+  travelType: z.string().nullable().optional(),
+  pros: z.array(z.string()).optional(),
+  cons: z.array(z.string()).optional(),
+  destinationId: z.string().optional(),
 });
 
 /**
@@ -28,10 +33,9 @@ const reviewSchema = z.object({
  * Flow:
  *   requireAuth
  *   -> validate body (Zod)
- *   -> find itinerary, verify it belongs to req.user and trip is completed
- *   -> upsert Review (one per user per itinerary)
- *   -> create notification ("Thanks for your review")
- *   -> return review
+ *   -> check if it is an itinerary or direct destination review
+ *   -> upsert Review (one per user per itinerary/destination)
+ *   -> populate user & return success + review
  */
 router.post('/', requireAuth, async (req, res) => {
   try {
@@ -39,43 +43,87 @@ router.post('/', requireAuth, async (req, res) => {
     if (!parsed.success) {
       return res.status(400).json({ error: parsed.error.flatten() });
     }
-    const { itineraryId, ratings, title, comment, photos, isPublic } = parsed.data;
+    const { itineraryId, ratings, title, comment, photos, isPublic, travelType, pros, cons, destinationId } = parsed.data;
 
-    const itinerary = await Itinerary.findById(itineraryId);
-    if (!itinerary) {
-      return res.status(404).json({ error: 'Itinerary not found' });
-    }
-    if (String(itinerary.userId) !== String(req.user.id)) {
-      return res.status(403).json({ error: 'Not your itinerary' });
+    let itinerary = null;
+    try {
+      itinerary = await Itinerary.findById(itineraryId);
+    } catch (e) {
+      // Ignore cast errors
     }
 
-    const review = await Review.findOneAndUpdate(
-      { itinerary: itineraryId, user: req.user.id },
-      {
-        itinerary: itineraryId,
-        user: req.user.id,
-        destination: itinerary.destinations?.[0] || itinerary.destination?.label || itinerary.destination || itinerary.title,
-        ratings,
-        title,
-        comment,
-        photos: photos || [],
-        isPublic: isPublic !== false,
-        tripCompletedAt: itinerary.endDate || new Date(),
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    let review;
+    if (itinerary) {
+      if (String(itinerary.userId) !== String(req.user.id)) {
+        return res.status(403).json({ error: 'Not your itinerary' });
+      }
+
+      review = await Review.findOneAndUpdate(
+        { itinerary: itinerary._id, user: req.user.id },
+        {
+          itinerary: itinerary._id,
+          user: req.user.id,
+          destination: itinerary.destinations?.[0] || itinerary.destination?.label || itinerary.destination || itinerary.title,
+          destinationId: itinerary.destinationId || null,
+          ratings,
+          title,
+          comment,
+          photos: photos || [],
+          isPublic: isPublic !== false,
+          tripCompletedAt: itinerary.endDate || new Date(),
+          travelType: travelType || null,
+          pros: pros || [],
+          cons: cons || []
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    } else {
+      let destId = destinationId || itineraryId;
+      let destinationDoc = null;
+      try {
+        destinationDoc = await Destination.findById(destId);
+      } catch (e) {
+        // Ignore cast errors
+      }
+
+      if (!destinationDoc) {
+        return res.status(404).json({ error: 'Itinerary or Destination not found' });
+      }
+
+      review = await Review.findOneAndUpdate(
+        { destinationId: destinationDoc._id, user: req.user.id, itinerary: { $exists: false } },
+        {
+          user: req.user.id,
+          destination: destinationDoc.name,
+          destinationId: destinationDoc._id,
+          ratings,
+          title,
+          comment,
+          photos: photos || [],
+          isPublic: isPublic !== false,
+          tripCompletedAt: new Date(),
+          travelType: travelType || null,
+          pros: pros || [],
+          cons: cons || []
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    }
+
+    // Populate user info so the frontend can display name & avatar immediately
+    await review.populate('user', 'name avatar role');
 
     await Notification.create({
       userId: req.user.id,
       type: 'review_submitted',
       message: `Thanks for reviewing your trip to ${review.destination}!`,
-      relatedItineraryId: itineraryId,
+      relatedItineraryId: itinerary ? itinerary._id : null,
     });
 
-    return res.status(201).json({ review });
+    return res.status(201).json({ success: true, review });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({ error: 'You already reviewed this itinerary' });
+      return res.status(409).json({ error: 'You already reviewed this destination or itinerary' });
     }
     console.error('POST /reviews error:', err);
     return res.status(500).json({ error: 'Failed to submit review' });

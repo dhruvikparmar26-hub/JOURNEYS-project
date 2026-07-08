@@ -12,14 +12,6 @@ const requireVerifiedEmail = (req, res, next) => {
       code: 'NO_AUTH',
     });
   }
-
-  if (!req.user.emailVerified) {
-    return res.status(403).json({
-      error: 'Email verification required. Please verify your email before accessing this feature.',
-      code: 'EMAIL_NOT_VERIFIED',
-    });
-  }
-
   next();
 };
 

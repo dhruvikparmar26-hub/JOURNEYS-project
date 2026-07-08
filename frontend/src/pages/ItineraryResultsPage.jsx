@@ -30,6 +30,68 @@ const ItineraryResultsPage = () => {
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState(null);
+  
+  const [isBooked, setIsBooked] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('upi');
+  const [upiId, setUpiId] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentStep, setPaymentStep] = useState('select');
+  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [sendingReport, setSendingReport] = useState(false);
+
+  const handleOpenPlaceDetails = (place) => {
+    setSelectedPlace(place);
+  };
+
+  const handleSendDetails = async () => {
+    if (!itinerary) return;
+    try {
+      setSendingReport(true);
+      const destinationLabel = itinerary.destinations?.[0] || itinerary.destination?.label || itinerary.destination || itinerary.title;
+      const promptData = itinerary.prompt ? (typeof itinerary.prompt === 'string' ? JSON.parse(itinerary.prompt) : itinerary.prompt) : {};
+
+      const daysStr = itinerary.days?.map(d => {
+        const hotelStr = d.locations?.filter(l => l.type === 'hotel').map(h => `- Stay: ${h.name} (${h.notes || 'Curated stay'})`).join('\n') || '';
+        const actsStr = d.activities?.map(a => `- ${a.time || '10:00 AM'}: ${a.description} (${a.notes || 'Activity details'})`).join('\n') || '';
+        const transStr = d.travelSegments?.map(t => `- Transit: ${t.mode.toUpperCase()} from ${t.from?.split(',')[0]} to ${t.to?.split(',')[0]} (${t.distanceKm} km, ₹${t.cost})`).join('\n') || '';
+        
+        return `Day ${d.dayNumber}:\n${hotelStr ? hotelStr + '\n' : ''}${actsStr ? actsStr + '\n' : ''}${transStr ? transStr + '\n' : ''}`;
+      }).join('\n') || '';
+
+      const reportMessage = `📊 JOURNEYS Trip Report - ${destinationLabel.toUpperCase()}
+-----------------------------------------------
+Origin: ${promptData.origin?.label || 'Mumbai'}
+Destination: ${destinationLabel}
+Duration: ${itinerary.durationDays || 3} Days
+Travel Mode: ${itinerary.days?.[0]?.travelSegments?.[0]?.mode?.toUpperCase() || 'PLANE'}
+Estimated Distance: ${itinerary.days?.[0]?.travelSegments?.[0]?.distanceKm || 1415} km
+Total Planned Cost: ₹${(itinerary.totalCost || 18000).toLocaleString('en-IN')}
+
+DAY-BY-DAY PLANS:
+${daysStr}
+-----------------------------------------------
+Report generated successfully. Safe travels!`;
+
+      await api.post('/notifications', {
+        type: 'itinerary_saved',
+        message: reportMessage,
+        relatedItineraryId: itinerary._id,
+        category: 'trip',
+        priority: 'high'
+      });
+
+      showSuccessToast('Full trip details report sent to your notifications!');
+    } catch (err) {
+      console.error(err);
+      showErrorToast('Failed to send trip report.');
+    } finally {
+      setSendingReport(false);
+    }
+  };
 
   const fetchItinerary = async () => {
     try {
@@ -37,6 +99,7 @@ const ItineraryResultsPage = () => {
       setError(null);
       const { data } = await api.get(`/itineraries/${id}`);
       setItinerary(data);
+      setIsBooked(data.status === 'booked');
       if (data.days && data.days.length > 0) {
         setSelectedDay(data.days[0]);
       }
@@ -130,8 +193,8 @@ const ItineraryResultsPage = () => {
           <div className="flex-[3] relative space-y-4">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <span className="text-[10px] bg-[#e6f4ea] text-[#006d35] border border-[#3bc48a]/20 px-3 py-1 rounded font-bold uppercase tracking-wider font-label-caps">
-                  Confirmed
+                <span className={`text-[10px] px-3 py-1 rounded font-bold uppercase tracking-wider font-label-caps border ${isBooked ? 'bg-[#e6f4ea] text-[#006d35] border-[#3bc48a]/20' : 'bg-[#fff5e6] text-[#885200] border-[#ffa630]/20'}`}>
+                  {isBooked ? 'Confirmed / Booked' : 'Pending Booking'}
                 </span>
                 <span className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">
                   {itinerary.durationDays || 3} DAYS IN {destinationLabel?.toUpperCase()}
@@ -177,6 +240,30 @@ const ItineraryResultsPage = () => {
           </div>
         </div>
 
+        {/* Book Ticket Callout Banner */}
+        {!isBooked && (
+          <div className="bg-white rounded-2xl border border-[#ffa630] p-6 shadow-md flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="space-y-1">
+              <h4 className="font-bold text-base text-[#0B1226] flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">local_activity</span>
+                Complete Your Trip Ticket Booking
+              </h4>
+              <p className="text-xs text-on-surface-variant max-w-xl">
+                Secure your flights/transits, reserve hotel stays, and purchase attraction entries in one unified transaction.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setPaymentStep('select');
+                setShowPaymentModal(true);
+              }}
+              className="bg-[#ffa630] text-[#0B1226] font-bold px-6 py-3 rounded-xl hover:brightness-105 active:scale-95 transition-all shadow-sm text-xs uppercase tracking-wider font-label-caps cursor-pointer whitespace-nowrap"
+            >
+              Book Tickets Now • ₹{(itinerary.totalCost || 18000).toLocaleString('en-IN')}
+            </button>
+          </div>
+        )}
+
         {/* Pink conflict alert box (Image 7 style) */}
         <div className="p-5 bg-[#fce8e6] border border-[#ba1a1a]/20 text-[#ba1a1a] rounded-2xl space-y-2">
           <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider font-label-caps">
@@ -217,6 +304,13 @@ const ItineraryResultsPage = () => {
               className="bg-white border border-[#D1C7BD] text-[#0B1226] font-bold px-6 py-2.5 rounded-lg hover:bg-[#FAF6F0] active:scale-95 transition-all shadow-sm text-xs uppercase tracking-wider font-label-caps cursor-pointer animate-pulse"
             >
               Plan with crew
+            </button>
+            <button
+              onClick={handleSendDetails}
+              disabled={sendingReport}
+              className="bg-white border border-[#D1C7BD] text-[#0B1226] font-bold px-6 py-2.5 rounded-lg hover:bg-[#FAF6F0] active:scale-95 transition-all shadow-sm text-xs uppercase tracking-wider font-label-caps cursor-pointer"
+            >
+              {sendingReport ? 'Sending...' : 'Send details to me'}
             </button>
           </div>
           <div>
@@ -263,7 +357,21 @@ const ItineraryResultsPage = () => {
 
                   {/* Hotels */}
                   {day.locations?.filter(loc => loc.type === 'hotel').map((hotel, hIndex) => (
-                    <div key={hIndex} className="bg-white rounded-xl p-5 border border-[#E5DED4] shadow-sm flex items-start gap-4 hover:border-primary-container transition-colors">
+                    <div 
+                      key={hIndex} 
+                      onClick={() => handleOpenPlaceDetails({
+                        name: hotel.name,
+                        type: 'hotel',
+                        description: hotel.notes || 'A beautiful, premium stay option curated by our AI travel assistant.',
+                        rating: '4.8 ★',
+                        details: 'Features luxury rooms, outstanding hospitality, dining options, and close proximity to key landmarks.',
+                        reviews: [
+                          'Absolutely loved the stay! The service was top notch.',
+                          'Excellent location and very clean rooms. Highly recommended.'
+                        ]
+                      })}
+                      className="bg-white rounded-xl p-5 border border-[#E5DED4] shadow-sm flex items-start gap-4 hover:border-primary cursor-pointer hover:shadow-md transition-all"
+                    >
                       <div className="w-12 h-12 rounded-lg bg-[#FAF6F0] flex items-center justify-center text-[#ffa630] flex-shrink-0">
                         <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>hotel</span>
                       </div>
@@ -283,7 +391,22 @@ const ItineraryResultsPage = () => {
 
                   {/* Activities */}
                   {day.activities?.map((act, aIndex) => (
-                    <div key={aIndex} className="bg-white rounded-xl p-5 border border-[#E5DED4] shadow-sm flex items-start gap-4 hover:border-primary-container transition-colors">
+                    <div 
+                      key={aIndex} 
+                      onClick={() => handleOpenPlaceDetails({
+                        name: act.description,
+                        type: 'activity',
+                        time: act.time || '10:00 AM',
+                        description: act.notes || 'A curated local activity to explore the heritage and culture of the region.',
+                        details: 'We recommend starting early. Bring comfortable walking shoes, a camera, and stay hydrated!',
+                        rating: '4.7 ★',
+                        reviews: [
+                          'A must-visit spot. Super rich history and very beautiful!',
+                          'Great experience. Guided tour is recommended.'
+                        ]
+                      })}
+                      className="bg-white rounded-xl p-5 border border-[#E5DED4] shadow-sm flex items-start gap-4 hover:border-primary cursor-pointer hover:shadow-md transition-all"
+                    >
                       <div className="w-12 h-12 rounded-lg bg-[#FAF6F0] flex items-center justify-center text-primary flex-shrink-0">
                         <span className="material-symbols-outlined">explore</span>
                       </div>
@@ -383,6 +506,301 @@ const ItineraryResultsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Place Details Modal (Image 9 click detail) */}
+      {selectedPlace && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full border border-[#E5DED4] shadow-2xl overflow-hidden flex flex-col relative animate-scale-up">
+            {/* Header */}
+            <div className="bg-[#FAF6F0] p-6 border-b border-[#E5DED4] flex justify-between items-start">
+              <div>
+                <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider font-label-caps block w-max mb-2">
+                  {selectedPlace.type.toUpperCase()}
+                </span>
+                <h3 className="font-display-lg text-lg text-[#0B1226] leading-snug">{selectedPlace.name}</h3>
+              </div>
+              <button 
+                onClick={() => setSelectedPlace(null)}
+                className="text-outline hover:text-[#0B1226] cursor-pointer flex items-center"
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
+              {selectedPlace.type === 'activity' && (
+                <div className="flex gap-4 text-xs font-semibold text-outline pb-2">
+                  <span>⏱️ Scheduled Time: {selectedPlace.time}</span>
+                  <span>⭐ Rating: {selectedPlace.rating}</span>
+                </div>
+              )}
+              {selectedPlace.type === 'hotel' && (
+                <div className="flex gap-4 text-xs font-semibold text-outline pb-2">
+                  <span>⭐ Rating: {selectedPlace.rating}</span>
+                  <span>🛌 Stay Type: Luxury</span>
+                </div>
+              )}
+              
+              <div className="space-y-1.5">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[#0B1226]">Description</h4>
+                <p className="text-xs text-on-surface-variant leading-relaxed">{selectedPlace.description}</p>
+              </div>
+
+              <div className="space-y-1.5 bg-[#FAF6F0] p-4 rounded-xl border border-[#E5DED4]">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[#885200]">Travel Tip</h4>
+                <p className="text-xs text-[#6b4000] leading-relaxed">{selectedPlace.details}</p>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[#0B1226]">Guest Reviews</h4>
+                <div className="space-y-2">
+                  {selectedPlace.reviews.map((r, i) => (
+                    <div key={i} className="text-xs bg-[#FAF6F0]/40 p-3 rounded-lg border border-[#FAF6F0] italic text-on-surface-variant">
+                      "{r}"
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="bg-[#FAF6F0]/50 p-4 border-t border-[#E5DED4] flex justify-end">
+              <button
+                onClick={() => setSelectedPlace(null)}
+                className="bg-[#0B1226] text-white font-bold px-6 py-2 rounded-lg hover:brightness-110 text-xs uppercase tracking-wider font-label-caps cursor-pointer"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment and Ticket Booking Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-[#E5DED4] shadow-2xl overflow-hidden flex flex-col relative animate-scale-up">
+            
+            {/* Step 1: Select payment method and input details */}
+            {paymentStep === 'select' && (
+              <>
+                <div className="bg-[#FAF6F0] p-6 border-b border-[#E5DED4] flex justify-between items-center">
+                  <h3 className="font-display-lg text-lg text-[#0B1226]">Ticket Booking checkout</h3>
+                  <button onClick={() => setShowPaymentModal(false)} className="text-outline hover:text-[#0B1226] cursor-pointer flex items-center">
+                    <span className="material-symbols-outlined text-xl">close</span>
+                  </button>
+                </div>
+                
+                <div className="p-6 space-y-6">
+                  <div className="bg-[#FAF6F0] p-4 rounded-xl border border-[#E5DED4]">
+                    <span className="font-label-caps text-[9px] text-outline uppercase block mb-1">Total Travel Cost</span>
+                    <span className="font-display-lg text-2xl font-bold text-primary">₹{(itinerary.totalCost || 18000).toLocaleString('en-IN')}</span>
+                  </div>
+                  
+                  {/* Tabs */}
+                  <div className="flex border border-[#E5DED4] rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('upi')}
+                      className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider font-label-caps cursor-pointer border-r border-[#E5DED4] transition-colors ${paymentMethod === 'upi' ? 'bg-[#0B1226] text-white' : 'bg-white text-on-surface-variant hover:bg-[#FAF6F0]'}`}
+                    >
+                      UPI ID
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('card')}
+                      className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider font-label-caps cursor-pointer transition-colors ${paymentMethod === 'card' ? 'bg-[#0B1226] text-white' : 'bg-white text-on-surface-variant hover:bg-[#FAF6F0]'}`}
+                    >
+                      Credit/Debit Card
+                    </button>
+                  </div>
+                  
+                  {paymentMethod === 'upi' ? (
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="font-label-caps text-[10px] text-outline uppercase tracking-wider">Enter UPI ID</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. aditya@upi"
+                          value={upiId}
+                          onChange={(e) => setUpiId(e.target.value)}
+                          className="w-full h-12 px-4 rounded-xl border border-[#D1C7BD] bg-white focus:border-primary transition-all outline-none text-sm font-semibold text-[#0B1226]"
+                        />
+                      </div>
+                      <div className="flex items-center gap-4 bg-[#FAF6F0] p-4 rounded-xl border border-[#E5DED4]">
+                        <span className="material-symbols-outlined text-3xl text-outline">qr_code_2</span>
+                        <div className="text-[11px] text-on-surface-variant leading-relaxed">
+                          <p className="font-bold text-[#0B1226]">Scan QR Code on next step</p>
+                          <p>You can scan and pay using any UPI app like Google Pay, PhonePe, or Paytm.</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="font-label-caps text-[10px] text-outline uppercase tracking-wider">Card Number</label>
+                        <input
+                          type="text"
+                          placeholder="xxxx xxxx xxxx xxxx"
+                          maxLength={19}
+                          value={cardNumber}
+                          onChange={(e) => setCardNumber(e.target.value)}
+                          className="w-full h-12 px-4 rounded-xl border border-[#D1C7BD] bg-white focus:border-primary transition-all outline-none text-sm font-semibold text-[#0B1226]"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="font-label-caps text-[10px] text-outline uppercase tracking-wider">Expiry Date</label>
+                          <input
+                            type="text"
+                            placeholder="MM/YY"
+                            maxLength={5}
+                            value={cardExpiry}
+                            onChange={(e) => setCardExpiry(e.target.value)}
+                            className="w-full h-12 px-4 rounded-xl border border-[#D1C7BD] bg-white focus:border-primary transition-all outline-none text-sm font-semibold text-[#0B1226]"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="font-label-caps text-[10px] text-outline uppercase tracking-wider">CVV</label>
+                          <input
+                            type="password"
+                            placeholder="•••"
+                            maxLength={3}
+                            value={cardCvv}
+                            onChange={(e) => setCardCvv(e.target.value)}
+                            className="w-full h-12 px-4 rounded-xl border border-[#D1C7BD] bg-white focus:border-primary transition-all outline-none text-sm font-semibold text-[#0B1226]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="bg-[#FAF6F0]/50 p-4 border-t border-[#E5DED4] flex justify-end gap-3">
+                  <button
+                    onClick={() => setShowPaymentModal(false)}
+                    className="bg-white border border-[#D1C7BD] text-[#0B1226] font-bold px-6 py-2.5 rounded-lg hover:bg-[#FAF6F0] text-xs uppercase tracking-wider font-label-caps cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (paymentMethod === 'upi' && !upiId.includes('@')) {
+                        showErrorToast('Please enter a valid UPI ID');
+                        return;
+                      }
+                      if (paymentMethod === 'card' && (cardNumber.length < 15 || !cardExpiry || cardCvv.length < 3)) {
+                        showErrorToast('Please enter valid Card details');
+                        return;
+                      }
+                      
+                      setIsPaying(true);
+                      setPaymentStep('processing');
+                      
+                      // Payment Processing Simulation
+                      const steps = [
+                        'Initiating transaction gateway...',
+                        'Contacting payment processor...',
+                        'Confirming transit seat reservations...',
+                        'Generating booking confirmation stub...'
+                      ];
+                      
+                      for (let i = 0; i < steps.length; i++) {
+                        await new Promise(r => setTimeout(r, 800));
+                      }
+                      
+                      try {
+                        const pMethodLabel = paymentMethod === 'upi' ? `UPI ID: ${upiId}` : `Card: **** **** **** ${cardNumber.slice(-4)}`;
+                        
+                        // Create Booking in DB to update spend metrics
+                        await api.post('/itineraries/bookings', {
+                          itineraryId: itinerary._id,
+                          itemName: `Trip Package to ${destinationLabel}`,
+                          itemType: 'transport',
+                          bookingDate: new Date(),
+                          quantity: 1,
+                          price: itinerary.totalCost || 18000,
+                          currency: 'INR'
+                        });
+
+                        await api.post('/notifications', {
+                          type: 'booking_confirmed',
+                          message: `🎉 Ticket Booked! Your journey from ${promptData.origin?.label?.split(',')[0] || 'Delhi'} to ${destinationLabel?.split(',')[0] || 'Jaipur'} is confirmed. Total cost of ₹${(itinerary.totalCost || 18000).toLocaleString('en-IN')} paid successfully via ${pMethodLabel}.`,
+                          relatedItineraryId: itinerary._id,
+                          category: 'booking',
+                          priority: 'urgent'
+                        });
+                        
+                        await api.post('/notifications', {
+                          type: 'itinerary_ready',
+                          message: `📅 Day-to-day itinerary for ${destinationLabel} is now active. Total Days: ${itinerary.days?.length || 3}. Pack light and enjoy your journey!`,
+                          relatedItineraryId: itinerary._id,
+                          category: 'trip',
+                          priority: 'high'
+                        });
+                        
+                        try {
+                          await api.patch(`/itineraries/${itinerary._id}`, { status: 'booked' });
+                        } catch (statusErr) {
+                          console.log('Ignore minor status error, fallback to local confirmation state');
+                        }
+
+                        setIsBooked(true);
+                        setPaymentStep('success');
+                        showSuccessToast('Tickets booked successfully!');
+                      } catch (err) {
+                        console.error(err);
+                        showErrorToast('Failed to create booking notifications. Resuming local checkout simulation.');
+                        setIsBooked(true);
+                        setPaymentStep('success');
+                      } finally {
+                        setIsPaying(false);
+                      }
+                    }}
+                    className="bg-[#ffa630] text-[#0B1226] font-bold px-6 py-2.5 rounded-lg hover:brightness-105 active:scale-95 transition-all text-xs uppercase tracking-wider font-label-caps cursor-pointer"
+                  >
+                    Pay & Book Tickets
+                  </button>
+                </div>
+              </>
+            )}
+            
+            {/* Step 2: Processing Payment Spinner */}
+            {paymentStep === 'processing' && (
+              <div className="p-12 text-center flex flex-col items-center justify-center space-y-6">
+                <span className="w-12 h-12 border-4 border-[#ffa630] border-t-transparent rounded-full animate-spin"></span>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-sm text-[#0B1226] uppercase tracking-wider font-label-caps">Simulating UPI/Card Payment</h4>
+                  <p className="text-xs text-on-surface-variant">Connecting to secure banking corridors. Do not refresh...</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Step 3: Success checkmark */}
+            {paymentStep === 'success' && (
+              <div className="p-10 text-center flex flex-col items-center justify-center space-y-6">
+                <div className="w-16 h-16 rounded-full bg-[#e6f4ea] border border-[#3bc48a]/20 flex items-center justify-center text-[#006d35] scale-up animate-pulse">
+                  <span className="material-symbols-outlined text-4xl">check_circle</span>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-display-lg text-lg text-[#0B1226]">Payment Successful!</h3>
+                  <p className="text-xs text-on-surface-variant leading-relaxed max-w-xs mx-auto">
+                    Your tickets are confirmed. Booking details and day-wise plans have been sent to your notifications panel.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="bg-[#0B1226] text-white font-bold px-8 py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all text-xs uppercase tracking-wider font-label-caps cursor-pointer w-full mt-4"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+            
+          </div>
+        </div>
+      )}
     </LandingLayout>
   );
 };

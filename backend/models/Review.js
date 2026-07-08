@@ -12,7 +12,7 @@ const ReviewSchema = new Schema(
     itinerary: {
       type: Schema.Types.ObjectId,
       ref: 'Itinerary',
-      required: true,
+      required: false,
       index: true,
     },
     user: {
@@ -83,8 +83,10 @@ const ReviewSchema = new Schema(
   { timestamps: true }
 );
 
-// One review per user per itinerary
-ReviewSchema.index({ itinerary: 1, user: 1 }, { unique: true });
+// One review per user per itinerary (if provided)
+ReviewSchema.index({ itinerary: 1, user: 1 }, { unique: true, sparse: true });
+// One review per user per destination (if direct review)
+ReviewSchema.index({ destinationId: 1, user: 1 }, { unique: true, sparse: true });
 ReviewSchema.index({ destination: 1, isPublic: 1, status: 1, createdAt: -1 });
 
 const Review = mongoose.model('Review', ReviewSchema);

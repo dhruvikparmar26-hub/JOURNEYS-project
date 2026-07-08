@@ -35,7 +35,7 @@ const activeGenerations = new Map();
  */
 router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, res) => {
   try {
-    const { origin, destination, startDate, endDate, budgetMin, budgetMax } = req.body;
+    const { origin, destination, startDate, endDate, budgetMin, budgetMax, vehicleType } = req.body;
 
     // Validate required fields
     if (!origin || !destination || !startDate || !endDate || budgetMin == null || budgetMax == null) {
@@ -111,7 +111,7 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
       durationDays: Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1,
       tripStartDate: start,
       tripEndDate: end,
-      prompt: JSON.stringify({ origin, destination, startDate, endDate, budgetMin, budgetMax }),
+      prompt: JSON.stringify({ origin, destination, startDate, endDate, budgetMin, budgetMax, vehicleType }),
     });
 
     const itineraryId = itinerary._id.toString();
@@ -148,89 +148,118 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
         generation.itinerary = result.itinerary;
       }
 
-      // Update the Itinerary record with the final result
       try {
-        const totalCost = result.itinerary?.totalCost || 0;
+        const distance = result.itinerary.route?.distanceKm || 0;
+        let chosenMode = 'car';
+        let chosenCost = result.itinerary.route?.costs?.cab?.estimated || 0;
+        let chosenDuration = result.itinerary.route?.durationSeconds 
+          ? Math.round(result.itinerary.route.durationSeconds / 60) 
+          : 240;
+
+        if (vehicleType) {
+          const vt = vehicleType.toLowerCase();
+          if (vt === 'plane' || vt === 'flight') {
+            chosenMode = 'flight';
+            chosenCost = Math.round(distance * 8 + 2000);
+            chosenDuration = Math.round((distance / 700) * 60) + 60;
+          } else if (vt === 'bus') {
+            chosenMode = 'bus';
+            chosenCost = Math.round(distance * 3);
+            chosenDuration = Math.round((distance / 50) * 60);
+          } else if (vt === 'bike') {
+            chosenMode = 'bike';
+            chosenCost = Math.round(distance * 1.5);
+            chosenDuration = Math.round((distance / 40) * 60);
+          } else if (vt === 'car') {
+            chosenMode = 'car';
+            chosenCost = Math.round(distance * 10);
+            chosenDuration = Math.round((distance / 70) * 60);
+          }
+        } else {
+          if (distance > 500) {
+            if (result.itinerary.route?.costs?.flight?.estimated) {
+              chosenMode = 'flight';
+              chosenCost = result.itinerary.route.costs.flight.estimated;
+              chosenDuration = Math.round(distance / 700 * 60) + 60;
+            } else if (result.itinerary.route?.costs?.train?.ac3?.estimated) {
+              chosenMode = 'train';
+              chosenCost = result.itinerary.route.costs.train.ac3.estimated;
+              chosenDuration = Math.round(distance / 60 * 60);
+            }
+          } else if (distance > 250) {
+            if (result.itinerary.route?.costs?.train?.ac3?.estimated) {
+              chosenMode = 'train';
+              chosenCost = result.itinerary.route.costs.train.ac3.estimated;
+              chosenDuration = Math.round(distance / 60 * 60);
+            }
+          }
+        }
+
+        const days = result.itinerary.dailyPlan.map((day, index) => {
+          const isDepartureDay = index === 0;
+          const isReturnDay = index === result.itinerary.dailyPlan.length - 1;
+
+          return {
+            dayNumber: day.dayNumber,
+            title: `Day ${day.dayNumber}`,
+            locations: result.itinerary.recommendedHotel
+              ? [
+                  {
+                    name: result.itinerary.recommendedHotel.name,
+                    lat: result.itinerary.recommendedHotel.location.lat,
+                    lng: result.itinerary.recommendedHotel.location.lng,
+                    type: 'hotel',
+                    notes: result.itinerary.recommendedHotel.description,
+                  },
+                ]
+              : [],
+            activities: day.activities.map((activity) => ({
+              time: activity.time,
+              description: `${activity.name} (${activity.type})`,
+              cost: activity.cost,
+              currency: 'INR',
+            })),
+            travelSegments: (isDepartureDay && result.itinerary.route)
+              ? [
+                  {
+                    from: origin.label,
+                    to: destination.label,
+                    mode: chosenMode,
+                    distanceKm: distance,
+                    durationMinutes: chosenDuration,
+                    cost: chosenCost,
+                  },
+                ]
+              : (isReturnDay && result.itinerary.route)
+              ? [
+                  {
+                    from: destination.label,
+                    to: origin.label,
+                    mode: chosenMode,
+                    distanceKm: distance,
+                    durationMinutes: chosenDuration,
+                    cost: chosenCost,
+                  },
+                ]
+              : [],
+            dayCost: day.activities.reduce((sum, act) => sum + (act.cost || 0), 0) + 
+              ((isDepartureDay || isReturnDay) ? chosenCost : 0),
+          };
+        });
+
+        // Compute updated total cost including accommodation and activities
+        const hotelCostPerNight = result.itinerary.recommendedHotel?.price || 0;
+        const totalDays = result.itinerary.dailyPlan.length;
+        const hotelNights = Math.max(0, totalDays - 1);
+        const activitiesCostSum = days.reduce((sum, d) => sum + d.activities.reduce((aSum, a) => aSum + (a.cost || 0), 0), 0);
+        const transitCostSum = 2 * chosenCost;
+        const recalculatedTotalCost = activitiesCostSum + transitCostSum + (hotelCostPerNight * hotelNights);
+
         await Itinerary.findByIdAndUpdate(itineraryId, {
           status: 'generated',
-          totalCost: isNaN(totalCost) ? 0 : totalCost,
+          totalCost: isNaN(recalculatedTotalCost) ? 0 : recalculatedTotalCost,
           generatedAt: new Date(),
-          days: result.itinerary.dailyPlan.map((day, index) => {
-            const distance = result.itinerary.route?.distanceKm || 0;
-            let chosenMode = 'car';
-            let chosenCost = result.itinerary.route?.costs?.cab?.estimated || 0;
-            let chosenDuration = result.itinerary.route?.durationSeconds 
-              ? Math.round(result.itinerary.route.durationSeconds / 60) 
-              : 240;
-
-            if (distance > 500) {
-              if (result.itinerary.route?.costs?.flight?.estimated) {
-                chosenMode = 'flight';
-                chosenCost = result.itinerary.route.costs.flight.estimated;
-                chosenDuration = Math.round(distance / 700 * 60) + 60; // flight duration
-              } else if (result.itinerary.route?.costs?.train?.ac3?.estimated) {
-                chosenMode = 'train';
-                chosenCost = result.itinerary.route.costs.train.ac3.estimated;
-                chosenDuration = Math.round(distance / 60 * 60);
-              }
-            } else if (distance > 250) {
-              if (result.itinerary.route?.costs?.train?.ac3?.estimated) {
-                chosenMode = 'train';
-                chosenCost = result.itinerary.route.costs.train.ac3.estimated;
-                chosenDuration = Math.round(distance / 60 * 60);
-              }
-            }
-
-            const isDepartureDay = index === 0;
-            const isReturnDay = index === result.itinerary.dailyPlan.length - 1;
-
-            return {
-              dayNumber: day.dayNumber,
-              title: `Day ${day.dayNumber}`,
-              locations: result.itinerary.recommendedHotel
-                ? [
-                    {
-                      name: result.itinerary.recommendedHotel.name,
-                      lat: result.itinerary.recommendedHotel.location.lat,
-                      lng: result.itinerary.recommendedHotel.location.lng,
-                      type: 'hotel',
-                      notes: result.itinerary.recommendedHotel.description,
-                    },
-                  ]
-                : [],
-              activities: day.activities.map((activity) => ({
-                time: activity.time,
-                description: `${activity.name} (${activity.type})`,
-                cost: activity.cost,
-                currency: 'INR',
-              })),
-              travelSegments: (isDepartureDay && result.itinerary.route)
-                ? [
-                    {
-                      from: origin.label,
-                      to: destination.label,
-                      mode: chosenMode,
-                      distanceKm: distance,
-                      durationMinutes: chosenDuration,
-                      cost: chosenCost,
-                    },
-                  ]
-                : (isReturnDay && result.itinerary.route)
-                ? [
-                    {
-                      from: destination.label,
-                      to: origin.label,
-                      mode: chosenMode,
-                      distanceKm: distance,
-                      durationMinutes: chosenDuration,
-                      cost: chosenCost,
-                    },
-                  ]
-                : [],
-              dayCost: day.activities.reduce((sum, act) => sum + (act.cost || 0), 0) + 
-                ((isDepartureDay || isReturnDay) ? chosenCost : 0),
-            };
-          }),
+          days,
         });
 
         // Emit notification for itinerary ready (only for authenticated users)

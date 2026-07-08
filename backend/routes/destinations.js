@@ -22,7 +22,14 @@ router.get('/', async (req, res) => {
       query.continent = continent;
     }
     if (maxBudget) {
-      query['avgBudgetPerDay.midRange'] = { $lte: Number(maxBudget) };
+      const budgetNum = Number(maxBudget);
+      if (budgetNum <= 3000) {
+        query['avgBudgetPerDay.budget'] = { $lte: budgetNum };
+      } else if (budgetNum <= 10000) {
+        query['avgBudgetPerDay.midRange'] = { $lte: budgetNum };
+      } else {
+        query['avgBudgetPerDay.luxury'] = { $lte: budgetNum };
+      }
     }
     if (search) {
       query.$or = [

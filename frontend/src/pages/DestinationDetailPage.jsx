@@ -87,7 +87,13 @@ const DestinationDetailPage = () => {
 
   const handlePlanTrip = () => {
     if (destination) {
-      navigate('/planner', { state: { prefillTo: `${destination.name}, ${destination.country}` } });
+      const userOrigin = window.prompt("Where would you like to start your trip from? (Starting Point/Origin)", "Mumbai, India");
+      navigate('/planner', {
+        state: {
+          prefillTo: `${destination.name}, ${destination.country}`,
+          prefillFrom: userOrigin !== null ? userOrigin : ''
+        }
+      });
     }
   };
 

@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 import LandingLayout from '../components/ui/LandingLayout.jsx';
 import api from '../utils/api.js';
 import { useToast } from '../components/ui/Toast.jsx';
+
+const getDestinationImage = (dest) => {
+  const d = (dest || '').toLowerCase();
+  if (d.includes('delhi')) return 'https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=1200&q=80';
+  if (d.includes('jaipur')) return 'https://images.unsplash.com/photo-1477584322811-2a4fe51a28bb?auto=format&fit=crop&w=1200&q=80';
+  if (d.includes('mumbai')) return 'https://images.unsplash.com/photo-1566552881560-0be862a7c445?auto=format&fit=crop&w=1200&q=80';
+  if (d.includes('goa')) return 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1200&q=80';
+  if (d.includes('amalfi')) return 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=1200&q=80';
+  if (d.includes('kyoto')) return 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80';
+  if (d.includes('tokyo')) return 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80';
+  return 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1200&q=80';
+};
 
 const PackingListPage = () => {
   const { itineraryId } = useParams();
@@ -229,7 +242,7 @@ const PackingListPage = () => {
                   return (
                     <div key={idx} className="space-y-1">
                       <div className="flex items-center gap-2 text-[#ffa630]">
-                        <span className="material-symbols-outlined text-sm">sparkles</span>
+                        <Sparkles className="w-4 h-4 text-[#ffa630] flex-shrink-0" />
                         <h4 className="font-bold text-xs uppercase tracking-wider">{title}</h4>
                       </div>
                       <p className="text-xs text-white/80 leading-relaxed pl-6">{desc || 'Always respect local traditions and guidelines.'}</p>
@@ -244,8 +257,8 @@ const PackingListPage = () => {
         {/* Scenic Closing Banner */}
         <div className="rounded-2xl h-80 overflow-hidden relative shadow-lg group">
           <img 
-            src="https://images.unsplash.com/photo-1506461883276-594a12b11cc3?auto=format&fit=crop&w=1200&q=80" 
-            alt="Jaipur Palace" 
+            src={getDestinationImage(packingList.destination)} 
+            alt={packingList.destination} 
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0B1226]/80 via-[#0B1226]/40 to-transparent flex flex-col justify-end p-10">

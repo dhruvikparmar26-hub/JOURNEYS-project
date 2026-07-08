@@ -99,7 +99,7 @@ const NotificationBell = () => {
                       }
                     }}
                   >
-                    <p className="text-sm text-text-primary">{notification.message}</p>
+                    <p className="text-sm text-text-primary whitespace-pre-wrap">{notification.message}</p>
                     <p className="text-xs text-text-muted mt-1">
                       {new Date(notification.createdAt).toLocaleDateString()}
                     </p>

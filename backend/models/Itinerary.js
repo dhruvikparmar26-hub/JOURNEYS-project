@@ -42,7 +42,7 @@ const daySchema = new mongoose.Schema(
         to: { type: String },
         mode: {
           type: String,
-          enum: ['flight', 'train', 'bus', 'car', 'auto', 'walk', 'ferry', 'metro', 'rickshaw'],
+          enum: ['flight', 'train', 'bus', 'car', 'bike', 'auto', 'walk', 'ferry', 'metro', 'rickshaw'],
           default: 'car',
         },
         distanceKm: { type: Number },
