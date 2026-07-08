@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { loadGoogleMaps } from '../utils/maps.js';
 import api from '../utils/api.js';
@@ -21,12 +21,35 @@ import { Compass, MapPin, Calendar, AlertCircle, CheckCircle, Navigation } from 
  */
 const TripRequestForm = ({ onSubmitSuccess }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mapsLoaded, setMapsLoaded] = useState(false);
   const [apiKey, setApiKey] = useState('');
   
   // Form input fields
   const [origin, setOrigin] = useState({ lat: null, lng: null, label: '' });
   const [destination, setDestination] = useState({ lat: null, lng: null, label: '', placeId: '' });
+
+  // Prefill state values if passed from landing page or explore page
+  useEffect(() => {
+    if (location.state?.prefillDestination) {
+      setDestination(prev => ({
+        ...prev,
+        label: location.state.prefillDestination
+      }));
+    }
+    if (location.state?.prefillFrom) {
+      setOrigin(prev => ({
+        ...prev,
+        label: location.state.prefillFrom
+      }));
+    }
+    if (location.state?.prefillTo) {
+      setDestination(prev => ({
+        ...prev,
+        label: location.state.prefillTo
+      }));
+    }
+  }, [location.state]);
   
   // Date states (default to tomorrow and next week)
   const getTomorrowDate = () => {

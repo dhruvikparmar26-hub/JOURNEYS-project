@@ -19,7 +19,6 @@ const waitlistSchema = new mongoose.Schema(
   }
 );
 
-waitlistSchema.index({ email: 1 });
 
 const Waitlist = mongoose.model('Waitlist', waitlistSchema);
 

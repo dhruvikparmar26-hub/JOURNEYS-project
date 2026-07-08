@@ -72,6 +72,80 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+
+    // ─── Travelers ──────────────────────────────────────
+    travelers: [{
+      name: { type: String, trim: true },
+      age: { type: Number },
+      gender: { type: String, enum: ['male', 'female', 'other'] },
+      passportNumber: { type: String, default: '' },
+    }],
+
+    // ─── Payment ────────────────────────────────────────
+    paymentMethod: {
+      type: String,
+      enum: ['card', 'upi', 'netbanking', 'wallet', 'cod', null],
+      default: null,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['unpaid', 'partial', 'paid', 'refunded'],
+      default: 'unpaid',
+    },
+    transactionId: {
+      type: String,
+      default: '',
+    },
+
+    // ─── Cancellation ───────────────────────────────────
+    cancellationPolicy: {
+      type: String,
+      default: '',
+    },
+    cancellationDeadline: {
+      type: Date,
+      default: null,
+    },
+
+    // ─── Coupon ─────────────────────────────────────────
+    couponApplied: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coupon',
+      default: null,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    // ─── Insurance ──────────────────────────────────────
+    insuranceIncluded: {
+      type: Boolean,
+      default: false,
+    },
+    insuranceDetails: {
+      provider: { type: String, default: '' },
+      policyNumber: { type: String, default: '' },
+      coverageAmount: { type: Number, default: 0 },
+    },
+
+    // ─── Stay Details (hotels) ──────────────────────────
+    checkIn: {
+      type: Date,
+      default: null,
+    },
+    checkOut: {
+      type: Date,
+      default: null,
+    },
+
+    // ─── Extras ─────────────────────────────────────────
+    specialRequests: [{ type: String, trim: true }],
+    confirmationPDF: {
+      type: String,  // URL
+      default: '',
+    },
   },
   {
     timestamps: true,

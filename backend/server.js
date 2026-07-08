@@ -1,9 +1,10 @@
+import './config/loadEnv.js';
 import express from 'express';
-import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import connectDB from './config/db.js';
+import { validateEnv } from './config/env.js';
 import { applySecurityMiddleware } from './middleware/security.js';
 import { apiRateLimiter, generationRateLimiter } from './middleware/rateLimiter.js';
 import authRoutes from './routes/auth.js';
@@ -13,11 +14,24 @@ import routeRoutes from './routes/route.js';
 import itineraryRoutes from './routes/itineraries.js';
 import notificationRoutes from './routes/notifications.js';
 import waitlistRoutes from './routes/waitlist.js';
+import reviewsRoutes from './routes/reviews.js';
+import wishlistRoutes from './routes/wishlist.js';
+import priceAlertsRoutes from './routes/priceAlerts.js';
+import groupTripsRoutes from './routes/groupTrips.js';
+import packingListRoutes from './routes/packingList.js';
+import analyticsRoutes from './routes/analytics.js';
+import profileRoutes from './routes/profile.js';
+import supportRoutes from './routes/support.js';
+import couponsRoutes from './routes/coupons.js';
+import chatRoutes from './routes/chat.js';
+import destinationsRoutes from './routes/destinations.js';
 import User from './models/User.js';
 import guestSession from './middleware/guestSession.js';
+import { seedDB } from './utils/seedData.js';
+import { startPriceAlertScheduler } from './jobs/priceAlertChecker.js';
 
-// Load environment variables
-dotenv.config();
+// Validate environment variables (loaded via loadEnv.js)
+validateEnv();
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -115,14 +129,47 @@ app.use('/api/trip-requests', tripRequestRoutes);
 // Route calculation (public, rate-limited per guestId)
 app.use('/api/route', generationRateLimiter, routeRoutes);
 
-// Itinerary generation (open to guests, rate-limited per guestId)
-app.use('/api/itineraries', generationRateLimiter, itineraryRoutes);
+// Itineraries; generation endpoint applies its own stricter limiter.
+app.use('/api/itineraries', itineraryRoutes);
 
 // Notifications (authenticated only)
 app.use('/api/notifications', notificationRoutes);
 
 // Waitlist (public)
 app.use('/api/waitlist', waitlistRoutes);
+
+// Reviews and ratings
+app.use('/api/reviews', reviewsRoutes);
+
+// Wishlist / saved destinations
+app.use('/api/wishlist', wishlistRoutes);
+
+// Price alerts
+app.use('/api/price-alerts', priceAlertsRoutes);
+
+// Group trips
+app.use('/api/group-trips', groupTripsRoutes);
+
+// Packing lists
+app.use('/api/packing-list', packingListRoutes);
+
+// Analytics
+app.use('/api/analytics', analyticsRoutes);
+
+// User Profiles
+app.use('/api/profile', profileRoutes);
+
+// Customer Support
+app.use('/api/support', supportRoutes);
+
+// Coupons Management
+app.use('/api/coupons', couponsRoutes);
+
+// AI Travel Chat
+app.use('/api/chat', chatRoutes);
+
+// Destinations Metadata
+app.use('/api/destinations', destinationsRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────────
 
@@ -150,6 +197,11 @@ const startServer = async () => {
   try {
     // Connect to MongoDB
     await connectDB();
+    
+    // Seed Database with initial featured destinations & coupon codes
+    await seedDB();
+
+    startPriceAlertScheduler();
 
     app.listen(PORT, () => {
       console.log(`\n🚀 JOURNEYS API running on port ${PORT}`);

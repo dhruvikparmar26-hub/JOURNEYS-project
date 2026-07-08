@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { X, Navigation } from 'lucide-react';
 import AccountMenu from './AccountMenu.jsx';
 import useAuth from '../hooks/useAuth.js';
@@ -70,28 +71,35 @@ const MobileNav = ({ isOpen, onClose }) => {
         <div className="flex-1 overflow-y-auto py-6 space-y-6">
           {/* Main Links */}
           <div className="flex flex-col gap-1.5">
-            <a
-              href="/"
+            <Link
+              to="/"
               onClick={onClose}
               className="px-3.5 py-3 rounded text-sm font-semibold text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
             >
-              Dashboard
-            </a>
-            <a
-              href="/explore"
+              Home
+            </Link>
+            <Link
+              to="/planner"
+              onClick={onClose}
+              className="px-3.5 py-3 rounded text-sm font-semibold text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            >
+              Trip Planner
+            </Link>
+            <Link
+              to="/explore"
               onClick={onClose}
               className="px-3.5 py-3 rounded text-sm font-semibold text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
             >
               Explore
-            </a>
+            </Link>
             {isAuthenticated && (
-              <a
-                href="/my-trips"
+              <Link
+                to="/my-trips"
                 onClick={onClose}
                 className="px-3.5 py-3 rounded text-sm font-semibold text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
               >
                 My Trips
-              </a>
+              </Link>
             )}
           </div>
 

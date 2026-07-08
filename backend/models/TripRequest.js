@@ -48,6 +48,40 @@ const tripRequestSchema = new mongoose.Schema(
       required: [true, 'Maximum budget is required'],
       min: [0, 'Budget cannot be negative'],
     },
+
+    // ─── Travel Context ─────────────────────────────────
+    travelStyle: {
+      type: String,
+      enum: ['budget', 'mid-range', 'luxury', 'backpacker'],
+      default: 'mid-range',
+    },
+    travelers: {
+      adults: { type: Number, default: 1, min: 1 },
+      children: { type: Number, default: 0, min: 0 },
+      infants: { type: Number, default: 0, min: 0 },
+    },
+    preferences: {
+      accommodation: {
+        type: String,
+        enum: ['hotel', 'hostel', 'homestay', 'resort', 'any'],
+        default: 'any',
+      },
+      activities: [{ type: String, trim: true }], // e.g. "trekking", "food tours"
+      dietary: [{ type: String, trim: true }],     // e.g. "vegetarian", "halal"
+      accessibility: [{ type: String, trim: true }],
+    },
+    interests: [{ type: String, trim: true }], // e.g. "heritage", "nightlife"
+    flexibility: {
+      dates: { type: Boolean, default: false },
+      budget: { type: Boolean, default: false },
+      destinations: { type: Boolean, default: false },
+    },
+    specialOccasion: {
+      type: String,
+      trim: true,
+      default: '',
+    }, // birthday, anniversary, honeymoon, etc.
+    previousTrips: [{ type: String, trim: true }], // for AI context
   },
   {
     timestamps: true,

@@ -7,11 +7,9 @@
  * Requires MongoDB to be running for cache tests.
  */
 
+import '../config/loadEnv.js';
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 import { findMajorRoute, getRouteMatrix, estimateCosts } from '../services/routing.js';
-
-dotenv.config();
 
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/journeys';
 

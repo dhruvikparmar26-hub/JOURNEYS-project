@@ -14,11 +14,15 @@ import {
   verifyEmailToken,
   generateTempTwoFactorToken,
   verifyTempTwoFactorToken,
+  encryptSecret,
+  decryptSecret,
+  hashTotpCode,
 } from '../utils/tokens.js';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email.js';
 import { logAuthEvent } from '../utils/audit.js';
 import requireAuth from '../middleware/requireAuth.js';
 import { authRateLimiter, authSlowDown } from '../middleware/rateLimiter.js';
+import { csrfProtection, setCsrfCookie } from '../middleware/security.js';
 
 const router = Router();
 
@@ -75,6 +79,7 @@ const issueRefreshToken = async (user, res) => {
   user.refreshTokenHash = hashRefreshToken(refreshToken);
   await user.save();
   res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS);
+  setCsrfCookie(res);
   return refreshToken;
 };
 
@@ -269,7 +274,7 @@ router.post('/login', authRateLimiter, authSlowDown, async (req, res) => {
 // POST /api/auth/refresh
 // ═══════════════════════════════════════════════════════════════
 
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', csrfProtection, async (req, res) => {
   try {
     const token = req.cookies?.[REFRESH_COOKIE_NAME];
 
@@ -319,7 +324,7 @@ router.post('/refresh', async (req, res) => {
 // POST /api/auth/logout
 // ═══════════════════════════════════════════════════════════════
 
-router.post('/logout', async (req, res) => {
+router.post('/logout', csrfProtection, async (req, res) => {
   try {
     const token = req.cookies?.[REFRESH_COOKIE_NAME];
 
@@ -452,10 +457,10 @@ router.get(
 
       await logAuthEvent(user._id, 'google_oauth_login', req);
 
-      // Redirect to frontend with access token in URL fragment (not query param)
-      // Fragment (#) is never sent to the server, so it's more secure
+      // Redirect to frontend with access token in URL fragment.
+      // Fragment (#) is never sent to the server, so it's more secure.
       return res.redirect(
-        `${process.env.FRONTEND_URL || 'http://localhost:5180'}/?token=${accessToken}`
+        `${process.env.FRONTEND_URL || 'http://localhost:5180'}/#token=${encodeURIComponent(accessToken)}`
       );
     } catch (error) {
       console.error('OAuth callback error:', error);
@@ -483,7 +488,7 @@ router.post('/2fa/enroll', requireAuth, async (req, res) => {
     const secret = generateSecret();
 
     // Store secret (not yet confirmed — will be confirmed on verify)
-    user.totpSecret = secret;
+    user.totpSecret = encryptSecret(secret);
     await user.save();
 
     // Generate QR code
@@ -515,13 +520,14 @@ router.post('/2fa/verify', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Verification code is required' });
     }
 
-    const result = await verify({ token: code, secret: user.totpSecret });
+    const result = await verify({ token: code, secret: decryptSecret(user.totpSecret) });
 
-    if (!result || !result.valid) {
+    if (result !== true && !result?.valid) {
       return res.status(400).json({ error: 'Invalid verification code' });
     }
 
     user.totpEnabled = true;
+    user.lastTotpCodeHash = hashTotpCode(code);
     await user.save();
 
     await logAuthEvent(user._id, '2fa_enrolled', req);
@@ -553,11 +559,19 @@ router.post('/2fa/validate', async (req, res) => {
     }
 
     // Verify TOTP code
-    const result = await verify({ token: code, secret: user.totpSecret });
+    const codeHash = hashTotpCode(code);
+    if (user.lastTotpCodeHash === codeHash) {
+      return res.status(400).json({ error: 'Verification code was already used' });
+    }
 
-    if (!result || !result.valid) {
+    const result = await verify({ token: code, secret: decryptSecret(user.totpSecret) });
+
+    if (result !== true && !result?.valid) {
       return res.status(400).json({ error: 'Invalid verification code' });
     }
+
+    user.lastTotpCodeHash = codeHash;
+    await user.save();
 
     // Issue full tokens
     const accessToken = generateAccessToken(user._id.toString());
@@ -662,4 +676,3 @@ router.post('/claim-guest-itineraries', requireAuth, async (req, res) => {
 });
 
 export default router;
-

@@ -36,7 +36,7 @@ export const authSlowDown = slowDown({
  */
 export const apiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000, // Increased for testing
+  max: Number(process.env.API_RATE_LIMIT_MAX) || 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -51,7 +51,7 @@ export const apiRateLimiter = rateLimit({
  */
 export const generationRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 100, // Increased for testing
+  max: Number(process.env.GENERATION_RATE_LIMIT_MAX) || 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

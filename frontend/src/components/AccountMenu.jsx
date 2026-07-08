@@ -39,7 +39,7 @@ const AccountMenu = ({ inline = false, onNavigate }) => {
       <Button
         variant="primary"
         size="sm"
-        onClick={() => openAuthModal('Sign in to view your account')}
+        onClick={() => navigate('/login')}
         className="font-bold cursor-pointer"
       >
         Sign In

@@ -8,6 +8,8 @@ import { generationRateLimiter } from '../middleware/rateLimiter.js';
 import requireAuth from '../middleware/requireAuth.js';
 import requireVerifiedEmail from '../middleware/requireVerifiedEmail.js';
 import guestSession from '../middleware/guestSession.js';
+import optionalAuth from '../middleware/optionalAuth.js';
+import { canAccessOwnedDocument, getOwnerFields, getUserId } from '../utils/ownership.js';
 
 const router = Router();
 
@@ -31,12 +33,12 @@ const activeGenerations = new Map();
  *   budgetMax: number
  * }
  */
-router.post('/', generationRateLimiter, guestSession, async (req, res) => {
+router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, res) => {
   try {
     const { origin, destination, startDate, endDate, budgetMin, budgetMax } = req.body;
 
     // Validate required fields
-    if (!origin || !destination || !startDate || !endDate || !budgetMin || !budgetMax) {
+    if (!origin || !destination || !startDate || !endDate || budgetMin == null || budgetMax == null) {
       return res.status(400).json({
         error: 'Missing required fields',
         required: ['origin', 'destination', 'startDate', 'endDate', 'budgetMin', 'budgetMax'],
@@ -44,13 +46,13 @@ router.post('/', generationRateLimiter, guestSession, async (req, res) => {
     }
 
     // Validate origin and destination structure
-    if (!origin.lat || !origin.lng || !origin.label) {
+    if (origin.lat == null || origin.lng == null || !origin.label) {
       return res.status(400).json({
         error: 'Invalid origin: must include lat, lng, and label',
       });
     }
 
-    if (!destination.lat || !destination.lng || !destination.label) {
+    if (destination.lat == null || destination.lng == null || !destination.label) {
       return res.status(400).json({
         error: 'Invalid destination: must include lat, lng, and label',
       });
@@ -86,10 +88,7 @@ router.post('/', generationRateLimiter, guestSession, async (req, res) => {
     }
 
     // Determine owner (userId or guestId)
-    const ownerId = {
-      userId: req.user?.id || null,
-      guestId: req.user?.id ? null : req.guestId,
-    };
+    const ownerId = getOwnerFields(req);
 
     // Create TripRequest record
     const tripRequest = await TripRequest.create({
@@ -122,7 +121,12 @@ router.post('/', generationRateLimiter, guestSession, async (req, res) => {
       log: [],
       status: 'generating',
       itinerary: null,
+      ownerId,
     });
+
+    setTimeout(() => {
+      activeGenerations.delete(itineraryId);
+    }, 30 * 60 * 1000);
 
     // Start the orchestrator in the background
     runOrchestrator(
@@ -151,46 +155,88 @@ router.post('/', generationRateLimiter, guestSession, async (req, res) => {
           status: 'generated',
           totalCost: isNaN(totalCost) ? 0 : totalCost,
           generatedAt: new Date(),
-          days: result.itinerary.dailyPlan.map((day, index) => ({
-            dayNumber: day.dayNumber,
-            title: `Day ${day.dayNumber}`,
-            locations: result.itinerary.recommendedHotel
-              ? [
-                  {
-                    name: result.itinerary.recommendedHotel.name,
-                    lat: result.itinerary.recommendedHotel.location.lat,
-                    lng: result.itinerary.recommendedHotel.location.lng,
-                    type: 'hotel',
-                    notes: result.itinerary.recommendedHotel.description,
-                  },
-                ]
-              : [],
-            activities: day.activities.map((activity) => ({
-              time: activity.time,
-              description: `${activity.name} (${activity.type})`,
-              cost: activity.cost,
-              currency: 'INR',
-            })),
-            travelSegments: result.itinerary.route
-              ? [
-                  {
-                    from: origin.label,
-                    to: destination.label,
-                    mode: 'car',
-                    distanceKm: result.itinerary.route.distanceKm,
-                    durationMinutes: Math.round(result.itinerary.route.durationSeconds / 60),
-                    cost: result.itinerary.route.costs?.cab?.cost || 0,
-                  },
-                ]
-              : [],
-            dayCost: day.activities.reduce((sum, act) => sum + (act.cost || 0), 0),
-          })),
+          days: result.itinerary.dailyPlan.map((day, index) => {
+            const distance = result.itinerary.route?.distanceKm || 0;
+            let chosenMode = 'car';
+            let chosenCost = result.itinerary.route?.costs?.cab?.estimated || 0;
+            let chosenDuration = result.itinerary.route?.durationSeconds 
+              ? Math.round(result.itinerary.route.durationSeconds / 60) 
+              : 240;
+
+            if (distance > 500) {
+              if (result.itinerary.route?.costs?.flight?.estimated) {
+                chosenMode = 'flight';
+                chosenCost = result.itinerary.route.costs.flight.estimated;
+                chosenDuration = Math.round(distance / 700 * 60) + 60; // flight duration
+              } else if (result.itinerary.route?.costs?.train?.ac3?.estimated) {
+                chosenMode = 'train';
+                chosenCost = result.itinerary.route.costs.train.ac3.estimated;
+                chosenDuration = Math.round(distance / 60 * 60);
+              }
+            } else if (distance > 250) {
+              if (result.itinerary.route?.costs?.train?.ac3?.estimated) {
+                chosenMode = 'train';
+                chosenCost = result.itinerary.route.costs.train.ac3.estimated;
+                chosenDuration = Math.round(distance / 60 * 60);
+              }
+            }
+
+            const isDepartureDay = index === 0;
+            const isReturnDay = index === result.itinerary.dailyPlan.length - 1;
+
+            return {
+              dayNumber: day.dayNumber,
+              title: `Day ${day.dayNumber}`,
+              locations: result.itinerary.recommendedHotel
+                ? [
+                    {
+                      name: result.itinerary.recommendedHotel.name,
+                      lat: result.itinerary.recommendedHotel.location.lat,
+                      lng: result.itinerary.recommendedHotel.location.lng,
+                      type: 'hotel',
+                      notes: result.itinerary.recommendedHotel.description,
+                    },
+                  ]
+                : [],
+              activities: day.activities.map((activity) => ({
+                time: activity.time,
+                description: `${activity.name} (${activity.type})`,
+                cost: activity.cost,
+                currency: 'INR',
+              })),
+              travelSegments: (isDepartureDay && result.itinerary.route)
+                ? [
+                    {
+                      from: origin.label,
+                      to: destination.label,
+                      mode: chosenMode,
+                      distanceKm: distance,
+                      durationMinutes: chosenDuration,
+                      cost: chosenCost,
+                    },
+                  ]
+                : (isReturnDay && result.itinerary.route)
+                ? [
+                    {
+                      from: destination.label,
+                      to: origin.label,
+                      mode: chosenMode,
+                      distanceKm: distance,
+                      durationMinutes: chosenDuration,
+                      cost: chosenCost,
+                    },
+                  ]
+                : [],
+              dayCost: day.activities.reduce((sum, act) => sum + (act.cost || 0), 0) + 
+                ((isDepartureDay || isReturnDay) ? chosenCost : 0),
+            };
+          }),
         });
 
         // Emit notification for itinerary ready (only for authenticated users)
-        if (ownerId) {
+        if (ownerId.userId) {
           await Notification.create({
-            userId: ownerId,
+            userId: ownerId.userId,
             type: 'itinerary_ready',
             message: `Your itinerary from ${origin.label} to ${destination.label} is ready!`,
             relatedItineraryId: itineraryId,
@@ -247,27 +293,33 @@ router.post('/', generationRateLimiter, guestSession, async (req, res) => {
  * from the orchestrator as it runs. Open to all - no auth required
  * to watch your own in-progress generation.
  */
-router.get('/:id/stream', async (req, res) => {
+router.get('/:id/stream', optionalAuth, guestSession, async (req, res) => {
   const itineraryId = req.params.id;
-
-  // Set SSE headers
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Access-Control-Allow-Origin', '*');
 
   // Check if the generation exists
   const generation = activeGenerations.get(itineraryId);
+
+  const canAccessGeneration = (ownerId) => {
+    const userId = getUserId(req);
+    if (userId && ownerId?.userId?.toString() === userId) return true;
+    return Boolean(!userId && req.guestId && ownerId?.guestId === req.guestId);
+  };
   
   if (!generation) {
     // If not found, check if it's already completed in the database
     try {
       const itinerary = await Itinerary.findById(itineraryId);
       if (!itinerary) {
-        res.write(`data: ${JSON.stringify({ error: 'Itinerary not found' })}\n\n`);
-        res.end();
-        return;
+        return res.status(404).json({ error: 'Itinerary not found' });
       }
+
+      if (!canAccessOwnedDocument(req, itinerary)) {
+        return res.status(403).json({ error: 'You do not have access to this itinerary' });
+      }
+
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
 
       if (itinerary.status === 'generated') {
         res.write(`data: ${JSON.stringify({ status: 'completed', message: 'Itinerary already generated' })}\n\n`);
@@ -280,11 +332,18 @@ router.get('/:id/stream', async (req, res) => {
       res.end();
       return;
     } catch (error) {
-      res.write(`data: ${JSON.stringify({ error: 'Failed to check itinerary status' })}\n\n`);
-      res.end();
-      return;
+      return res.status(500).json({ error: 'Failed to check itinerary status' });
     }
   }
+
+  if (!canAccessGeneration(generation.ownerId)) {
+    return res.status(403).json({ error: 'You do not have access to this itinerary stream' });
+  }
+
+  // Set SSE headers after authorization succeeds.
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
 
   // Send existing logs if any
   if (generation.log && generation.log.length > 0) {
@@ -295,6 +354,8 @@ router.get('/:id/stream', async (req, res) => {
 
   // Send current status
   res.write(`data: ${JSON.stringify({ type: 'status', status: generation.status })}\n\n`);
+
+  let lastLogIndex = generation.log?.length || 0;
 
   const pollInterval = setInterval(() => {
     const currentGeneration = activeGenerations.get(itineraryId);
@@ -308,14 +369,13 @@ router.get('/:id/stream', async (req, res) => {
 
     // Send new logs since last poll
     if (currentGeneration.log && currentGeneration.log.length > 0) {
-      const lastLogIndex = generation.log.length;
       const newLogs = currentGeneration.log.slice(lastLogIndex);
       
       newLogs.forEach((logEntry) => {
         res.write(`data: ${JSON.stringify({ type: 'log', ...logEntry })}\n\n`);
       });
       
-      generation.log = [...currentGeneration.log];
+      lastLogIndex = currentGeneration.log.length;
     }
 
     // Check if completed
@@ -357,23 +417,16 @@ router.get('/:id/stream', async (req, res) => {
  * Open to guests (if they own it) and authenticated users.
  * Ownership verification: must match either req.guestId OR req.user.id
  */
-router.get('/:id', guestSession, async (req, res) => {
+router.get('/:id', optionalAuth, guestSession, async (req, res) => {
   try {
     const itineraryId = req.params.id;
-    const userId = req.user?.id || null;
-    const guestId = req.user?.id ? null : req.guestId;
-
     const itinerary = await Itinerary.findById(itineraryId);
 
     if (!itinerary) {
       return res.status(404).json({ error: 'Itinerary not found' });
     }
 
-    // Check ownership - must match either guestId or userId
-    const isOwnerByGuest = !userId && itinerary.guestId === guestId;
-    const isOwnerByUser = userId && itinerary.userId && itinerary.userId.toString() === userId.toString();
-
-    if (!isOwnerByGuest && !isOwnerByUser) {
+    if (!canAccessOwnedDocument(req, itinerary)) {
       return res.status(403).json({ error: 'You do not have access to this itinerary' });
     }
 
@@ -418,17 +471,17 @@ router.post('/:id/save', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'You cannot save an itinerary that belongs to another user' });
     }
 
-    res.status(200).json({
-      message: 'Itinerary saved successfully',
-      itinerary,
-    });
-
     // Emit notification for saved itinerary
     await Notification.create({
       userId: req.user.id,
       type: 'itinerary_saved',
-      message: `Your itinerary "${itinerary.origin.label} to ${itinerary.destination.label}" has been saved.`,
+      message: `Your itinerary "${itinerary.destinations?.join(', ') || itinerary.title}" has been saved.`,
       relatedItineraryId: itinerary._id,
+    });
+
+    res.status(200).json({
+      message: 'Itinerary saved successfully',
+      itinerary,
     });
   } catch (error) {
     console.error('Error saving itinerary:', error);
@@ -536,7 +589,8 @@ router.post('/:id/share', requireAuth, async (req, res) => {
       await itinerary.save();
     }
 
-    const shareUrl = `${req.protocol}://${req.get('host')}/shared/${itinerary.shareToken}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5180';
+    const shareUrl = `${frontendUrl}/shared/${itinerary.shareToken}`;
 
     res.status(200).json({
       shareUrl,
@@ -544,7 +598,7 @@ router.post('/:id/share', requireAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error generating share link:', error);
-    res.status(500).json({ error: 'Failed to生成 share link' });
+    res.status(500).json({ error: 'Failed to generate share link' });
   }
 });
 

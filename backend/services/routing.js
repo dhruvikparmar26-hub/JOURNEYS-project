@@ -281,6 +281,44 @@ export const estimateCosts = (distanceKm, mode = 'all') => {
   return costs;
 };
 
+export const getRouteEstimate = async ({ origin, destination, mode = 'all' }) => {
+  const majorRoute = findMajorRoute(origin.label, destination.label);
+  let distanceKm;
+  let durationSeconds;
+  let source;
+
+  if (majorRoute) {
+    distanceKm = majorRoute.distanceKm;
+    durationSeconds = Math.round((distanceKm / 60) * 3600);
+    source = majorRoute.source;
+  } else {
+    const routeResult = await getRouteMatrix(origin, destination);
+    distanceKm = routeResult.distanceKm;
+    durationSeconds = routeResult.durationSeconds;
+    source = routeResult.source;
+  }
+
+  const rawCosts = estimateCosts(distanceKm, mode);
+  const normalizedCosts = {};
+
+  if (rawCosts.cab) normalizedCosts.cab = rawCosts.cab.estimated;
+  if (rawCosts.bus) {
+    normalizedCosts.bus = rawCosts.bus.AC?.estimated ?? rawCosts.bus.nonAC?.estimated;
+  }
+  if (rawCosts.train) {
+    normalizedCosts.train = rawCosts.train.sleeper?.estimated;
+  }
+  if (rawCosts.flight) normalizedCosts.flight = rawCosts.flight.estimated;
+
+  return {
+    distanceKm,
+    durationSeconds,
+    source,
+    costs: normalizedCosts,
+    rawCosts,
+  };
+};
+
 // ─── Haversine formula ───────────────────────────────────────────
 
 /**

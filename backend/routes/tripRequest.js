@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import TripRequest from '../models/TripRequest.js';
+import optionalAuth from '../middleware/optionalAuth.js';
+import { getOwnerFields } from '../utils/ownership.js';
 
 const router = Router();
 
@@ -28,7 +30,7 @@ const tripRequestInputSchema = z.object({
  * Saves a new trip request submitted by an anonymous guest or logged-in user.
  * Authenticated calls save to userId; unauthenticated calls save to guestId.
  */
-router.post('/', async (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
   try {
     // Validate request body
     const validation = tripRequestInputSchema.safeParse(req.body);
@@ -48,8 +50,7 @@ router.post('/', async (req, res) => {
     }
 
     // Determine ownership: prioritize authenticated userId, fallback to guestId
-    const userId = req.user?._id || null;
-    const guestId = userId ? null : (req.guestId || null);
+    const { userId, guestId } = getOwnerFields(req);
 
     if (!userId && !guestId) {
       return res.status(400).json({ error: 'Session correlation ID is missing. Refresh page.' });

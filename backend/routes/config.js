@@ -8,8 +8,11 @@ const router = Router();
  * to the frontend, avoiding the need to hardcode keys in static assets.
  */
 router.get('/', (req, res) => {
+  const browserKey = process.env.GOOGLE_MAPS_BROWSER_KEY ||
+    (process.env.NODE_ENV === 'production' ? '' : process.env.GOOGLE_MAPS_API_KEY);
+
   return res.status(200).json({
-    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey: browserKey || '',
   });
 });
 

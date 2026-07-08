@@ -43,6 +43,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    lastTotpCodeHash: {
+      type: String,
+      default: null,
+    },
     name: {
       type: String,
       trim: true,
@@ -51,6 +55,103 @@ const userSchema = new mongoose.Schema(
     avatar: {
       type: String,
       default: null,
+    },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user',
+    },
+
+    // ─── Extended Profile ────────────────────────────────
+    phone: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    dateOfBirth: {
+      type: Date,
+      default: null,
+    },
+    gender: {
+      type: String,
+      enum: ['male', 'female', 'non-binary', 'prefer-not-to-say', null],
+      default: null,
+    },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: '',
+    },
+    address: {
+      city: { type: String, trim: true, default: '' },
+      state: { type: String, trim: true, default: '' },
+      country: { type: String, trim: true, default: '' },
+      postalCode: { type: String, trim: true, default: '' },
+    },
+
+    // ─── Travel Preferences ─────────────────────────────
+    preferences: {
+      travelStyle: {
+        type: String,
+        enum: ['budget', 'mid-range', 'luxury', 'backpacker', null],
+        default: null,
+      },
+      dietaryRestrictions: [{ type: String, trim: true }],
+      accessibility: [{ type: String, trim: true }], // e.g. "wheelchair", "visual-aid"
+      preferredCurrency: { type: String, default: 'INR' },
+      language: { type: String, default: 'en' },
+      interests: [{ type: String, trim: true }], // e.g. "adventure", "food", "history"
+      notifications: {
+        email: { type: Boolean, default: true },
+        push: { type: Boolean, default: true },
+        priceAlerts: { type: Boolean, default: true },
+        tripReminders: { type: Boolean, default: true },
+        promotions: { type: Boolean, default: false },
+      },
+    },
+
+    // ─── Passport / Travel Documents ────────────────────
+    passport: {
+      number: { type: String, default: null },
+      expiryDate: { type: Date, default: null },
+      nationality: { type: String, trim: true, default: '' },
+      issuingCountry: { type: String, trim: true, default: '' },
+    },
+
+    // ─── Emergency Contact ──────────────────────────────
+    emergencyContact: {
+      name: { type: String, trim: true, default: '' },
+      phone: { type: String, trim: true, default: '' },
+      relation: { type: String, trim: true, default: '' },
+    },
+
+    // ─── Travel Stats (aggregated periodically) ─────────
+    travelStats: {
+      tripsCompleted: { type: Number, default: 0 },
+      countriesVisited: { type: Number, default: 0 },
+      citiesVisited: { type: Number, default: 0 },
+      totalSpent: { type: Number, default: 0 },
+      totalDistance: { type: Number, default: 0 }, // in km
+      memberSince: { type: Date, default: Date.now },
+    },
+
+    // ─── Loyalty / Tier System ──────────────────────────
+    loyaltyPoints: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    tier: {
+      type: String,
+      enum: ['bronze', 'silver', 'gold', 'platinum'],
+      default: 'bronze',
+    },
+
+    // ─── Social Links ───────────────────────────────────
+    socialLinks: {
+      instagram: { type: String, trim: true, default: '' },
+      twitter: { type: String, trim: true, default: '' },
     },
   },
   {

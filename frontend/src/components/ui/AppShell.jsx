@@ -39,7 +39,8 @@ const AppShell = ({ children, className = '' }) => {
 
             {/* Navigation Bar */}
             <nav className="hidden md:flex items-center gap-6">
-              <NavLink to="/" label="Dashboard" active={location.pathname === '/'} />
+              <NavLink to="/" label="Home" active={location.pathname === '/'} />
+              <NavLink to="/planner" label="Trip Planner" active={location.pathname === '/planner'} />
               <NavLink to="/explore" label="Explore" active={location.pathname === '/explore'} />
               {isAuthenticated && (
                 <NavLink to="/my-trips" label="My Trips" active={location.pathname === '/my-trips'} />

@@ -1,0 +1,5 @@
+backend.zip
+# Add additional paths (one per line) that should NOT be included in the public export.
+# Examples:
+# secret-config.json
+# backend/.env

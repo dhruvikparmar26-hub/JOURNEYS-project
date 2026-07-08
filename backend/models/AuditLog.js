@@ -26,6 +26,7 @@ const auditLogSchema = new mongoose.Schema(
         'account_locked',
         'google_oauth_login',
         'guest_itineraries_claimed',
+        'profile_update',
       ],
       index: true,
     },

@@ -1,5 +1,5 @@
 import { StateGraph, END } from '@langchain/langgraph';
-import axios from 'axios';
+import { findMajorRoute, getRouteMatrix, estimateCosts } from '../services/routing.js';
 
 // ─── State Definition ───────────────────────────────────────────────
 
@@ -301,37 +301,47 @@ const routingAgent = async (state) => {
       label: tripRequest.destination.label,
     };
 
-    // Call the route service (internal API call)
-    const routeResponse = await axios.get('http://localhost:5050/api/route', {
-      params: {
-        origin: JSON.stringify(origin),
-        destination: JSON.stringify(destination),
-        mode: 'all',
-      },
-    });
+    // Calculate routing locally without internal HTTP request
+    const majorRoute = findMajorRoute(origin.label, destination.label);
+    let distanceKm, durationSeconds, source;
 
-    const routeData = routeResponse.data;
-    
+    if (majorRoute) {
+      distanceKm = majorRoute.distanceKm;
+      durationSeconds = Math.round((distanceKm / 60) * 3600);
+      source = majorRoute.source;
+    } else {
+      const routeResult = await getRouteMatrix(origin, destination);
+      distanceKm = routeResult.distanceKm;
+      durationSeconds = routeResult.durationSeconds;
+      source = routeResult.source;
+    }
+
+    const costs = estimateCosts(distanceKm, 'all');
+
+    const hours = Math.floor(durationSeconds / 3600);
+    const mins = Math.round((durationSeconds % 3600) / 60);
+    const durationFormatted = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+
     state.routeInfo = {
       origin: tripRequest.origin.label,
       destination: tripRequest.destination.label,
-      distanceKm: routeData.route.distanceKm,
-      durationSeconds: routeData.route.durationSeconds,
-      durationFormatted: routeData.route.durationFormatted,
-      costs: routeData.costs,
+      distanceKm,
+      durationSeconds,
+      durationFormatted,
+      costs,
     };
 
     state.log.push({
       timestamp: new Date().toISOString(),
       agent: 'Routing Agent',
-      message: `Calculating route: ${tripRequest.origin.label} to ${tripRequest.destination.label} — ${routeData.route.distanceKm}km, ${routeData.route.durationFormatted}`,
+      message: `Calculating route: ${tripRequest.origin.label} to ${tripRequest.destination.label} — ${distanceKm}km, ${durationFormatted}`,
     });
 
     return state;
 
   } catch (error) {
     console.error('Routing agent error:', error);
-    // Fallback to estimated values if API fails
+    // Fallback to estimated values if local computation fails
     state.routeInfo = {
       origin: tripRequest.origin.label,
       destination: tripRequest.destination.label,
@@ -363,7 +373,8 @@ const routingAgent = async (state) => {
 const hotelAgent = async (state) => {
   const { tripRequest, routeInfo } = state;
   
-  const destinationCity = tripRequest.destination.label.toLowerCase();
+  const labelParts = tripRequest.destination.label.split(',');
+  const destinationCity = labelParts[0].trim().toLowerCase();
   const tripDays = calculateTripDays(tripRequest.startDate, tripRequest.endDate);
   const budgetPerNight = tripRequest.budgetMax / tripDays;
 
@@ -411,7 +422,8 @@ const hotelAgent = async (state) => {
 const activityAgent = async (state) => {
   const { tripRequest, routeInfo } = state;
   
-  const destinationCity = tripRequest.destination.label;
+  const labelParts = tripRequest.destination.label.split(',');
+  const destinationCity = labelParts[0].trim().toLowerCase();
   const tripDays = calculateTripDays(tripRequest.startDate, tripRequest.endDate);
 
   // Mock activities based on destination
@@ -478,7 +490,7 @@ const activityAgent = async (state) => {
     ],
   };
 
-  const activities = cityActivities[destinationCity.toLowerCase()] || cityActivities.delhi;
+  const activities = cityActivities[destinationCity] || cityActivities.delhi;
 
   // Distribute activities across days
   const activitiesPerDay = Math.ceil(activities.length / tripDays);
@@ -541,9 +553,16 @@ const itineraryBuilder = async (state) => {
   // Calculate total estimated cost
   let totalCost = 0;
 
-  // Add transportation cost (use cab as default)
-  if (routeInfo?.costs?.cab) {
-    totalCost += routeInfo.costs.cab.cost;
+  // Add transportation cost based on distance and mode
+  const distance = routeInfo?.distanceKm || 0;
+  if (routeInfo?.costs) {
+    if (distance > 500 && routeInfo.costs.flight?.estimated) {
+      totalCost += routeInfo.costs.flight.estimated;
+    } else if (distance > 250 && routeInfo.costs.train?.ac3?.estimated) {
+      totalCost += routeInfo.costs.train.ac3.estimated;
+    } else if (routeInfo.costs.cab?.estimated) {
+      totalCost += routeInfo.costs.cab.estimated;
+    }
   }
 
   // Add hotel cost (use first hotel as recommendation)
