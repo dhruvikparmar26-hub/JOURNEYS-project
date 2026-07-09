@@ -297,17 +297,15 @@ export const Footer = () => {
         <div className="md:col-span-3">
           <h4 className="font-label-caps text-background font-bold mb-6 text-xs uppercase tracking-widest text-[#ffa630]">Company</h4>
           <ul className="space-y-4 text-xs font-semibold uppercase tracking-wider text-background/60">
-            <li><Link to="/explore" className="text-background/70 hover:text-background transition-colors">About Us</Link></li>
-            <li><Link to="/explore" className="text-background/70 hover:text-background transition-colors">Press</Link></li>
-            <li><Link to="/explore" className="text-background/70 hover:text-background transition-colors">Careers</Link></li>
+            <li><Link to="/about" className="text-background/70 hover:text-background transition-colors">About Us</Link></li>
           </ul>
         </div>
         <div className="md:col-span-3">
           <h4 className="font-label-caps text-background font-bold mb-6 text-xs uppercase tracking-widest text-[#ffa630]">Support</h4>
           <ul className="space-y-4 text-xs font-semibold uppercase tracking-wider text-background/60">
             <li><Link to="/help" className="text-background/70 hover:text-background transition-colors">Help Center</Link></li>
-            <li><Link to="/explore" className="text-background/70 hover:text-background transition-colors">Privacy Policy</Link></li>
-            <li><Link to="/explore" className="text-background/70 hover:text-background transition-colors">Terms of Service</Link></li>
+            <li><Link to="/privacy" className="text-background/70 hover:text-background transition-colors">Privacy Policy</Link></li>
+            <li><Link to="/terms" className="text-background/70 hover:text-background transition-colors">Terms of Service</Link></li>
           </ul>
         </div>
       </div>
