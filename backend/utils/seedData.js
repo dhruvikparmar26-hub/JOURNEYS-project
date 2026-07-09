@@ -30,7 +30,9 @@ const mockDestinations = [
       hero: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?w=1200&h=600&fit=crop',
       gallery: [
         'https://images.unsplash.com/photo-1599661046289-e31897846e41?w=800&h=600&fit=crop',
-        'https://images.unsplash.com/photo-1603262110263-fb0112e7cc33?w=800&h=600&fit=crop'
+        'https://images.unsplash.com/photo-1603262110263-fb0112e7cc33?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1477584322902-471a53b9d133?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&h=600&fit=crop'
       ],
       thumbnail: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?w=400&h=300&fit=crop'
     },
@@ -78,7 +80,9 @@ const mockDestinations = [
       hero: 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=1200&h=600&fit=crop',
       gallery: [
         'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=800&h=600&fit=crop',
-        'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&h=600&fit=crop'
+        'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506461883276-594a12b11cc3?w=800&h=600&fit=crop'
       ],
       thumbnail: 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=400&h=300&fit=crop'
     },
@@ -125,7 +129,10 @@ const mockDestinations = [
     images: {
       hero: 'https://images.unsplash.com/photo-1562280963-8a5475740a10?w=1200&h=600&fit=crop',
       gallery: [
-        'https://images.unsplash.com/photo-1562280963-8a5475740a10?w=800&h=600&fit=crop'
+        'https://images.unsplash.com/photo-1562280963-8a5475740a10?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1599661046289-e31897846e41?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1603262110263-fb0112e7cc33?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&h=600&fit=crop'
       ],
       thumbnail: 'https://images.unsplash.com/photo-1562280963-8a5475740a10?w=400&h=300&fit=crop'
     },
@@ -172,7 +179,10 @@ const mockDestinations = [
     images: {
       hero: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=1200&h=600&fit=crop',
       gallery: [
-        'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=800&h=600&fit=crop'
+        'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&h=600&fit=crop'
       ],
       thumbnail: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=400&h=300&fit=crop'
     },
@@ -219,7 +229,10 @@ const mockDestinations = [
     images: {
       hero: 'https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=1200&h=600&fit=crop',
       gallery: [
-        'https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=800&h=600&fit=crop'
+        'https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1548013146-72479768bada?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1573140132338-765f04b2b1ff?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=800&h=600&fit=crop'
       ],
       thumbnail: 'https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=400&h=300&fit=crop'
     },
@@ -266,7 +279,10 @@ const mockDestinations = [
     images: {
       hero: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=1200&h=600&fit=crop',
       gallery: [
-        'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&h=600&fit=crop'
+        'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1598977123418-45f04b0a2088?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506461883276-594a12b11cc3?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1561361062-856753549c63?w=800&h=600&fit=crop'
       ],
       thumbnail: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=300&fit=crop'
     },
@@ -313,7 +329,10 @@ const mockDestinations = [
     images: {
       hero: 'https://images.unsplash.com/photo-1561361062-856753549c63?w=1200&h=600&fit=crop',
       gallery: [
-        'https://images.unsplash.com/photo-1561361062-856753549c63?w=800&h=600&fit=crop'
+        'https://images.unsplash.com/photo-1561361062-856753549c63?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1598977123418-45f04b0a2088?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506461883276-594a12b11cc3?w=800&h=600&fit=crop'
       ],
       thumbnail: 'https://images.unsplash.com/photo-1561361062-856753549c63?w=400&h=300&fit=crop'
     },
@@ -360,7 +379,10 @@ const mockDestinations = [
     images: {
       hero: 'https://images.unsplash.com/photo-1581888227599-779811939961?w=1200&h=600&fit=crop',
       gallery: [
-        'https://images.unsplash.com/photo-1581888227599-779811939961?w=800&h=600&fit=crop'
+        'https://images.unsplash.com/photo-1581888227599-779811939961?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1599661046289-e31897846e41?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1603262110263-fb0112e7cc33?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1562280963-8a5475740a10?w=800&h=600&fit=crop'
       ],
       thumbnail: 'https://images.unsplash.com/photo-1581888227599-779811939961?w=400&h=300&fit=crop'
     },
@@ -397,7 +419,12 @@ const mockDestinations = [
     timezone: 'Asia/Kolkata',
     images: {
       hero: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1548013146-72479768bada?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1548013146-72479768bada?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1573140132338-765f04b2b1ff?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=400&h=300&fit=crop'
     },
     categories: ['mountain', 'adventure', 'backpacking'],
@@ -429,7 +456,12 @@ const mockDestinations = [
     timezone: 'Asia/Kolkata',
     images: {
       hero: 'https://images.unsplash.com/photo-1573140132338-765f04b2b1ff?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1573140132338-765f04b2b1ff?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1573140132338-765f04b2b1ff?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1548013146-72479768bada?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1573140132338-765f04b2b1ff?w=400&h=300&fit=crop'
     },
     categories: ['mountain', 'hill-station'],
@@ -461,7 +493,12 @@ const mockDestinations = [
     timezone: 'Asia/Kolkata',
     images: {
       hero: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1573140132338-765f04b2b1ff?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=300&fit=crop'
     },
     categories: ['mountain', 'hill-station', 'wildlife'],
@@ -493,7 +530,12 @@ const mockDestinations = [
     timezone: 'Asia/Kolkata',
     images: {
       hero: 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506461883276-594a12b11cc3?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=400&h=300&fit=crop'
     },
     categories: ['mountain', 'hill-station'],
@@ -525,7 +567,12 @@ const mockDestinations = [
     timezone: 'Asia/Kolkata',
     images: {
       hero: 'https://images.unsplash.com/photo-1514222134-b57cbb8ce073?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1514222134-b57cbb8ce073?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1514222134-b57cbb8ce073?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1599661046289-e31897846e41?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1603262110263-fb0112e7cc33?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1514222134-b57cbb8ce073?w=400&h=300&fit=crop'
     },
     categories: ['spiritual', 'heritage', 'city'],
@@ -557,7 +604,12 @@ const mockDestinations = [
     timezone: 'Asia/Makassar',
     images: {
       hero: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&h=300&fit=crop'
     },
     categories: ['beach', 'adventure', 'wildlife', 'spiritual'],
@@ -589,7 +641,12 @@ const mockDestinations = [
     timezone: 'Asia/Bangkok',
     images: {
       hero: 'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=400&h=300&fit=crop'
     },
     categories: ['beach', 'adventure', 'island'],
@@ -608,7 +665,7 @@ const mockDestinations = [
     name: 'Amalfi Coast',
     slug: 'amalfi-coast',
     country: 'Italy',
-    region: 'Campania',
+    region: 'Campancy',
     continent: 'Europe',
     coordinates: { lat: 40.6331, lng: 14.6029 },
     shortDescription: 'Magnificent vertical towns, turquoise waters, and terraced lemon groves along cliffs.',
@@ -621,7 +678,12 @@ const mockDestinations = [
     timezone: 'Europe/Rome',
     images: {
       hero: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=400&h=300&fit=crop'
     },
     categories: ['beach', 'island', 'heritage'],
@@ -653,7 +715,12 @@ const mockDestinations = [
     timezone: 'Indian/Maldives',
     images: {
       hero: 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=400&h=300&fit=crop'
     },
     categories: ['beach', 'island'],
@@ -685,7 +752,12 @@ const mockDestinations = [
     timezone: 'Asia/Tokyo',
     images: {
       hero: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1490761902485-a7f51f2a0f8e?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&h=300&fit=crop'
     },
     categories: ['heritage', 'spiritual', 'city'],
@@ -717,7 +789,12 @@ const mockDestinations = [
     timezone: 'Europe/Rome',
     images: {
       hero: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1529260839382-3f772f26fe75?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&h=300&fit=crop'
     },
     categories: ['heritage', 'city'],
@@ -749,7 +826,12 @@ const mockDestinations = [
     timezone: 'Europe/Zurich',
     images: {
       hero: 'https://images.unsplash.com/photo-1515488042222-779811939961?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1515488042222-779811939961?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1515488042222-779811939961?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1527668752968-14dc70a27453?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1489447068241-b3490214e879?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1502784444187-359ac186c5bb?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1515488042222-779811939961?w=400&h=300&fit=crop'
     },
     categories: ['mountain', 'city'],
@@ -781,7 +863,12 @@ const mockDestinations = [
     timezone: 'Asia/Kolkata',
     images: {
       hero: 'https://images.unsplash.com/photo-1581888227599-779811939961?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1581888227599-779811939961?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1581888227599-779811939961?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506461883276-594a12b11cc3?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1581888227599-779811939961?w=400&h=300&fit=crop'
     },
     categories: ['wildlife', 'nature'],
@@ -813,7 +900,12 @@ const mockDestinations = [
     timezone: 'Asia/Kolkata',
     images: {
       hero: 'https://images.unsplash.com/photo-1581888227599-779811939961?w=1200&h=600&fit=crop',
-      gallery: ['https://images.unsplash.com/photo-1581888227599-779811939961?w=800&h=600&fit=crop'],
+      gallery: [
+        'https://images.unsplash.com/photo-1581888227599-779811939961?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1598977123418-45f04b0a2088?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1561361062-856753549c63?w=800&h=600&fit=crop'
+      ],
       thumbnail: 'https://images.unsplash.com/photo-1581888227599-779811939961?w=400&h=300&fit=crop'
     },
     categories: ['wildlife', 'nature', 'adventure'],
@@ -826,6 +918,205 @@ const mockDestinations = [
     idealDuration: '2 days',
     safetyScore: 9.0,
     popularityScore: 90,
+    isFeatured: true
+  },
+  // --- NEW LAKE & ISLAND PLACES ADDED TO GUARANTEE 5+ PER CATEGORY ---
+  {
+    name: 'Srinagar',
+    slug: 'srinagar',
+    country: 'India',
+    region: 'Jammu & Kashmir',
+    continent: 'Asia',
+    coordinates: { lat: 34.0837, lng: 74.7973 },
+    shortDescription: 'The beautiful summer capital of Kashmir, famous for classic houseboats and serene Dal Lake.',
+    description: 'Srinagar is the summer capital of Jammu and Kashmir, India. Lying in the Kashmir Valley on the banks of the Jhelum River, it is famous for its serene houseboats, stunning Mughal gardens, pristine lakes (like Dal Lake and Nigeen Lake), and traditional Kashmiri handicrafts like Pashmina shawls and hand-woven carpets.',
+    highlights: ['Dal Lake Houseboat Stay', 'Shalimar Bagh Mughal Garden', 'Shikara Ride at Sunrise', 'Nishat Bagh Garden', 'Shankaracharya Temple'],
+    bestTimeToVisit: {
+      from: 'April',
+      to: 'October',
+      description: 'Pleasant spring and summer weather is perfect for shikaras.'
+    },
+    avgBudgetPerDay: {
+      budget: 1200,
+      midRange: 3500,
+      luxury: 14000,
+      currency: 'INR'
+    },
+    languages: ['Kashmiri', 'Hindi', 'Urdu', 'English'],
+    currency: 'INR',
+    timezone: 'Asia/Kolkata',
+    images: {
+      hero: 'https://images.unsplash.com/photo-1598977123418-45f04b0a2088?w=1200&h=600&fit=crop',
+      gallery: [
+        'https://images.unsplash.com/photo-1598977123418-45f04b0a2088?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506461883276-594a12b11cc3?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1561361062-856753549c63?w=800&h=600&fit=crop'
+      ],
+      thumbnail: 'https://images.unsplash.com/photo-1598977123418-45f04b0a2088?w=400&h=300&fit=crop'
+    },
+    categories: ['lake', 'hill-station', 'backpacking'],
+    weather: {
+      summer: { avgTemp: 28, conditions: 'Warm and sunny' },
+      winter: { avgTemp: 4, conditions: 'Cold, snowy' },
+      monsoon: { avgTemp: 21, conditions: 'Light showers' }
+    },
+    travelTips: [
+      'Stay at least one night in a classic wooden houseboat on Dal Lake.',
+      'Take a Shikara boat ride early in the morning to see the floating vegetable market.',
+      'Always purchase authentic Pashmina wool with a government-authorized stamp.'
+    ],
+    idealDuration: '3-4 days',
+    safetyScore: 8.2,
+    popularityScore: 89,
+    isFeatured: true
+  },
+  {
+    name: 'Lake Como',
+    slug: 'lake-como',
+    country: 'Italy',
+    region: 'Lombardy',
+    continent: 'Europe',
+    coordinates: { lat: 46.0160, lng: 9.2662 },
+    shortDescription: 'Glamorous and scenic Italian lake retreat at the foot of the Alps, surrounded by historic villas.',
+    description: 'Lake Como, in Northern Italy’s Lombardy region, is an upscale resort area known for its dramatic alpine scenery and pristine waters. The lake is shaped like an inverted "Y", with picturesque villages like Bellagio, Varenna, and Menaggio dotted along its shores. It is famous for its grand Renaissance villas, beautiful botanical gardens, and scenic boat tours.',
+    highlights: ['Villa del Balbianello', 'Bellagio Waterfront Promenade', 'Varenna Old Town Alleys', 'Villa Carlotta Gardens', 'Como Cathedral'],
+    bestTimeToVisit: {
+      from: 'April',
+      to: 'October',
+      description: 'Lush spring gardens and warm summer breezes make it perfect.'
+    },
+    avgBudgetPerDay: {
+      budget: 3500,
+      midRange: 9000,
+      luxury: 35000,
+      currency: 'EUR'
+    },
+    languages: ['Italian', 'English'],
+    currency: 'EUR',
+    timezone: 'Europe/Rome',
+    images: {
+      hero: 'https://images.unsplash.com/photo-1527668752968-14dc70a27453?w=1200&h=600&fit=crop',
+      gallery: [
+        'https://images.unsplash.com/photo-1527668752968-14dc70a27453?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1489447068241-b3490214e879?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1515488042222-779811939961?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=800&h=600&fit=crop'
+      ],
+      thumbnail: 'https://images.unsplash.com/photo-1527668752968-14dc70a27453?w=400&h=300&fit=crop'
+    },
+    categories: ['lake', 'heritage', 'mountain'],
+    weather: {
+      summer: { avgTemp: 26, conditions: 'Warm, sunny' },
+      winter: { avgTemp: 6, conditions: 'Cold, foggy' },
+      monsoon: { avgTemp: 14, conditions: 'Misty autumn showers' }
+    },
+    travelTips: [
+      'Use the passenger ferries to hop between villages easily.',
+      'Book Villa del Balbianello garden entry tickets weeks in advance.',
+      'Dine on the lakeside terrace in Varenna at sunset.'
+    ],
+    idealDuration: '3 days',
+    safetyScore: 9.5,
+    popularityScore: 92,
+    isFeatured: true
+  },
+  {
+    name: 'Queenstown',
+    slug: 'queenstown',
+    country: 'New Zealand',
+    region: 'Otago',
+    continent: 'Oceania',
+    coordinates: { lat: -45.0312, lng: 168.6626 },
+    shortDescription: 'The adventure capital on Lake Wakatipu, backed by the dramatic Remarkables mountain range.',
+    description: 'Queenstown, New Zealand, sits on the shores of Lake Wakatipu, framed by the rugged Remarkables mountains. Renowned as the "Adventure Capital of the World," it is the birthplace of commercial bungy jumping and offers jet boating, white-water rafting, skydiving, and world-class skiing. The town also features cozy lakefront dining, local Pinot Noir wines, and alpine hikes.',
+    highlights: ['Shotover Jet Boat Ride', 'Skyline Gondola & Luge', 'TSS Earnslaw Lake Wakatipu Cruise', 'Bungy Jump at Kawarau Bridge', 'Remarkables Ski Fields'],
+    bestTimeToVisit: {
+      from: 'December',
+      to: 'August',
+      description: 'December-Feb is warm for lakes, June-August is peak ski season.'
+    },
+    avgBudgetPerDay: {
+      budget: 4000,
+      midRange: 12000,
+      luxury: 40000,
+      currency: 'NZD'
+    },
+    languages: ['English', 'Maori'],
+    currency: 'NZD',
+    timezone: 'Pacific/Auckland',
+    images: {
+      hero: 'https://images.unsplash.com/photo-1489447068241-b3490214e879?w=1200&h=600&fit=crop',
+      gallery: [
+        'https://images.unsplash.com/photo-1489447068241-b3490214e879?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1527668752968-14dc70a27453?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1515488042222-779811939961?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1502784444187-359ac186c5bb?w=800&h=600&fit=crop'
+      ],
+      thumbnail: 'https://images.unsplash.com/photo-1489447068241-b3490214e879?w=400&h=300&fit=crop'
+    },
+    categories: ['lake', 'mountain', 'adventure'],
+    weather: {
+      summer: { avgTemp: 22, conditions: 'Mild, warm' },
+      winter: { avgTemp: 4, conditions: 'Cold, snowy peaks' },
+      monsoon: { avgTemp: 12, conditions: 'Cool, crisp days' }
+    },
+    travelTips: [
+      'Order a Fergburger online beforehand to bypass the long queues.',
+      'Acquire a rental car to explore the beautiful scenic road to Glenorchy.',
+      'Carry layers, as alpine weather can shift rapidly.'
+    ],
+    idealDuration: '4-5 days',
+    safetyScore: 9.8,
+    popularityScore: 93,
+    isFeatured: true
+  },
+  {
+    name: 'Santorini',
+    slug: 'santorini',
+    country: 'Greece',
+    region: 'Cyclades',
+    continent: 'Europe',
+    coordinates: { lat: 36.3932, lng: 25.4615 },
+    shortDescription: 'Iconic volcanic island, famous for whitewashed Oia cliff houses and blue-domed churches.',
+    description: 'Santorini is one of the Cyclades islands in the Aegean Sea. Formed by a massive volcanic eruption, the island is famous for its dramatic caldera, cliff-clinging whitewashed villages like Oia and Fira, volcanic sand beaches (red and black), and spectacular sunset vistas.',
+    highlights: ['Oia Sunset Castle View', 'Caldera Cliff Walk (Fira to Oia)', 'Volcanic Red Beach', 'Akrotiri Prehistoric City', 'Aegean Sunset Cruise'],
+    bestTimeToVisit: {
+      from: 'May', to: 'October', description: 'Warm and sunny months perfect for cruises and beach exploration.'
+    },
+    avgBudgetPerDay: {
+      budget: 3500,
+      midRange: 11000,
+      luxury: 45000,
+      currency: 'EUR'
+    },
+    languages: ['Greek', 'English'],
+    currency: 'EUR',
+    timezone: 'Europe/Athens',
+    images: {
+      hero: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&h=600&fit=crop',
+      gallery: [
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=800&h=600&fit=crop'
+      ],
+      thumbnail: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop'
+    },
+    categories: ['island', 'beach', 'heritage'],
+    weather: {
+      summer: { avgTemp: 29, conditions: 'Hot, dry and sunny' },
+      winter: { avgTemp: 12, conditions: 'Cool, mild' },
+      monsoon: { avgTemp: 17, conditions: 'Breezy autumn days' }
+    },
+    travelTips: [
+      'Arrive in Oia 2 hours early to get a sunset spot without crowds.',
+      'Rent a quad bike/scooter to explore the black sand beaches of Perissa and Kamari.',
+      'Try local volcanic white wines like Assyrtiko.'
+    ],
+    idealDuration: '3-4 days',
+    safetyScore: 9.3,
+    popularityScore: 96,
     isFeatured: true
   }
 ];
@@ -878,6 +1169,14 @@ const mockCoupons = [
  */
 export const seedDB = async () => {
   try {
+    const destCount = await Destination.countDocuments();
+    const couponCount = await Coupon.countDocuments();
+
+    if (process.env.NODE_ENV === 'production' && destCount > 0 && couponCount > 0) {
+      console.log('🌱 Database already seeded. Skipping collections cleanup.');
+      return;
+    }
+
     // Drop existing destinations and coupons to ensure all category entries exist
     console.log('🌱 Cleaning and seeding database collections...');
     await Destination.deleteMany({});

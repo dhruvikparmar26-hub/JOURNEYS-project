@@ -11,6 +11,8 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: '/api',
   withCredentials: true, // Send cookies (refresh token)
+  xsrfCookieName: 'csrf-token',
+  xsrfHeaderName: 'x-csrf-token',
   headers: {
     'Content-Type': 'application/json',
   },

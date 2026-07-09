@@ -222,8 +222,12 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
             travelSegments: (isDepartureDay && result.itinerary.route)
               ? [
                   {
-                    from: origin.label,
-                    to: destination.label,
+                    from: (chosenMode === 'flight' && result.itinerary.route.airports)
+                      ? `${result.itinerary.route.airports.origin.name} (${result.itinerary.route.airports.origin.iata})`
+                      : origin.label,
+                    to: (chosenMode === 'flight' && result.itinerary.route.airports)
+                      ? `${result.itinerary.route.airports.destination.name} (${result.itinerary.route.airports.destination.iata})`
+                      : destination.label,
                     mode: chosenMode,
                     distanceKm: distance,
                     durationMinutes: chosenDuration,
@@ -233,8 +237,12 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
               : (isReturnDay && result.itinerary.route)
               ? [
                   {
-                    from: destination.label,
-                    to: origin.label,
+                    from: (chosenMode === 'flight' && result.itinerary.route.airports)
+                      ? `${result.itinerary.route.airports.destination.name} (${result.itinerary.route.airports.destination.iata})`
+                      : destination.label,
+                    to: (chosenMode === 'flight' && result.itinerary.route.airports)
+                      ? `${result.itinerary.route.airports.origin.name} (${result.itinerary.route.airports.origin.iata})`
+                      : origin.label,
                     mode: chosenMode,
                     distanceKm: distance,
                     durationMinutes: chosenDuration,

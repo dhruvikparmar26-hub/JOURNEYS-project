@@ -30,11 +30,15 @@ export const validateEnv = () => {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
-  if (
-    process.env.NODE_ENV === 'production' &&
-    process.env.JWT_SECRET === 'your-jwt-secret-change-this-in-production'
-  ) {
-    throw new Error('JWT_SECRET must be changed for production');
+  if (process.env.NODE_ENV === 'production') {
+    if (process.env.JWT_SECRET === 'your-jwt-secret-change-this-in-production') {
+      throw new Error('JWT_SECRET must be changed for production');
+    }
+    const requiredProdEnv = ['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'GOOGLE_OAUTH_CALLBACK_URL'];
+    const missingProd = requiredProdEnv.filter((name) => !process.env[name]);
+    if (missingProd.length > 0) {
+      throw new Error(`Missing required production environment variables: ${missingProd.join(', ')}`);
+    }
   }
 
   const disabled = OPTIONAL_ENV.filter((name) => !process.env[name]);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useSearchParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { Terminal } from 'lucide-react';
 import { AuthProvider } from './context/AuthContext.jsx';
@@ -6,6 +6,7 @@ import { ToastProvider, useToast } from './components/ui/Toast.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import useAuth from './hooks/useAuth.js';
 import api from './utils/api.js';
+import axios from 'axios';
 
 // Layout shell
 import LandingLayout from './components/ui/LandingLayout.jsx';
@@ -77,7 +78,7 @@ const LOCATIONS = [
   { label: "Rishikesh, India", lat: 30.0869, lng: 78.2676, country: "India" },
   { label: "Mysore, India", lat: 12.2958, lng: 76.6394, country: "India" },
   { label: "Pondicherry, India", lat: 11.9416, lng: 79.8083, country: "India" },
-  
+
   // Asia (15 options)
   { label: "Tokyo, Japan", lat: 35.6762, lng: 139.6503, country: "Japan" },
   { label: "Kyoto, Japan", lat: 35.0116, lng: 135.7681, country: "Japan" },
@@ -118,7 +119,7 @@ const findLocationInfo = (text) => {
   const t = text.toLowerCase().trim();
   const match = LOCATIONS.find(loc => loc.label.toLowerCase().includes(t) || t.includes(loc.label.toLowerCase()));
   if (match) return match;
-  
+
   const countries = ["india", "japan", "usa", "italy", "france", "uk", "australia", "egypt", "south africa", "singapore", "thailand", "indonesia", "malaysia", "south korea", "vietnam", "maldives", "nepal", "uae"];
   const countryCoords = {
     "india": { lat: 20.5937, lng: 78.9629, country: "India" },
@@ -140,7 +141,7 @@ const findLocationInfo = (text) => {
     "nepal": { lat: 28.3949, lng: 84.1240, country: "Nepal" },
     "uae": { lat: 23.4241, lng: 53.8478, country: "UAE" }
   };
-  
+
   for (const c of countries) {
     if (t.includes(c)) {
       return countryCoords[c];
@@ -153,58 +154,121 @@ const getHaversineDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(R * c);
 };
 
 const AutocompleteInput = ({ label, value, onChange, placeholder, icon }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [filtered, setFiltered] = useState([]);
-  
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown on click outside
   useEffect(() => {
-    if (!value) {
-      setFiltered(LOCATIONS.slice(0, 8));
-    } else {
-      const match = LOCATIONS.filter(loc => 
-        loc.label.toLowerCase().includes(value.toLowerCase())
-      );
-      setFiltered(match.slice(0, 8));
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Fetch suggestions from Photon API
+  const triggerPhotonSearch = async (query) => {
+    if (!query || query.trim().length < 3) {
+      setSuggestions([]);
+      return;
     }
+    setLoading(true);
+    try {
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8`;
+      const response = await axios.get(url);
+      const features = response.data.features || [];
+      const results = features.map(feature => {
+        const props = feature.properties || {};
+        const geom = feature.geometry || {};
+
+        const addressParts = [
+          props.name,
+          props.city || props.town || props.village,
+          props.state,
+          props.country
+        ].filter(Boolean);
+
+        const labelParts = [];
+        addressParts.forEach(part => {
+          if (!labelParts.includes(part)) {
+            labelParts.push(part);
+          }
+        });
+
+        return {
+          label: labelParts.join(', '),
+          lat: geom.coordinates[1],
+          lng: geom.coordinates[0],
+          country: props.country || ''
+        };
+      });
+      setSuggestions(results);
+    } catch (err) {
+      console.warn('Photon lookup in App.jsx failed:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const text = typeof value === 'object' ? value.label : value;
+    if (!text || text.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    const delayDebounce = setTimeout(() => {
+      triggerPhotonSearch(text);
+    }, 450);
+    return () => clearTimeout(delayDebounce);
   }, [value]);
-  
+
+  const displayValue = typeof value === 'object' ? value.label : value;
+
   return (
-    <div className="relative flex flex-col gap-1.5 w-full">
+    <div className="relative flex flex-col gap-1.5 w-full" ref={dropdownRef}>
       <label className="font-label-caps text-[10px] text-outline uppercase tracking-wider">{label}</label>
       <div className="relative col-span-1">
         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant text-sm">{icon}</span>
         <input
           type="text"
           placeholder={placeholder}
-          value={value}
+          value={displayValue}
           onChange={(e) => {
             onChange(e.target.value);
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          onBlur={() => {
-            setTimeout(() => setIsOpen(false), 200);
-          }}
           className="w-full h-12 pl-10 pr-4 rounded-xl border border-[#D1C7BD] bg-white focus:border-primary transition-all outline-none text-sm font-semibold text-[#0B1226]"
           required
         />
+        {loading && (
+          <span className="absolute right-3 top-4 flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+          </span>
+        )}
       </div>
-      
-      {isOpen && filtered.length > 0 && (
+
+      {isOpen && suggestions.length > 0 && (
         <div className="absolute top-[65px] left-0 w-full bg-white border border-[#E5DED4] rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
-          {filtered.map((loc, i) => (
+          {suggestions.map((loc, i) => (
             <div
               key={i}
               onMouseDown={() => {
-                onChange(loc.label);
+                onChange(loc);
                 setIsOpen(false);
               }}
               className="px-4 py-2.5 text-xs text-[#0B1226] hover:bg-[#FAF6F0] cursor-pointer font-semibold border-b border-[#FAF6F0] last:border-0"
@@ -474,26 +538,141 @@ const Dashboard = () => {
   const [estimatedCost, setEstimatedCost] = useState(0);
   const [isCrossCountry, setIsCrossCountry] = useState(false);
 
+  // Airport search states
+  const [activeSearch, setActiveSearch] = useState(null); // 'origin' | 'destination' | null
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+
+  // Trigger airport search on Overpass API
+  useEffect(() => {
+    if (vehicleType !== 'plane' || !searchQuery || searchQuery.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    const delayDebounce = setTimeout(async () => {
+      setSearchLoading(true);
+      
+      try {
+        const osmQuery = `[out:json][timeout:8];(
+          node[aeroway=aerodrome][iata](~"name"~"${searchQuery}",i);
+          way[aeroway=aerodrome][iata](~"name"~"${searchQuery}",i);
+          node[aeroway=aerodrome][iata](~"iata"~"^${searchQuery.toUpperCase()}$",i);
+          node[aeroway=aerodrome][iata](~"addr:city"~"${searchQuery}",i);
+        );out center 15;`;
+        
+        const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(osmQuery)}`;
+        const response = await axios.get(url, { timeout: 8000 });
+        const elements = response.data?.elements || [];
+        const overpassMatches = elements
+          .filter(el => {
+            const iata = (el.tags?.iata || '').trim().toUpperCase();
+            const name = (el.tags?.name || '').toLowerCase();
+            // Strict airport checks: must have a valid 3-letter IATA code and shouldn't be auxiliary structures
+            const isValidIata = /^[A-Z]{3}$/.test(iata);
+            const isAuxiliary = name.includes('cargo') || name.includes('depot') || name.includes('bus') || name.includes('parking') || name.includes('hangar') || name.includes('terminal');
+            return isValidIata && !isAuxiliary;
+          })
+          .map(el => {
+            const name = el.tags.name;
+            const city = el.tags['addr:city'] || el.tags.municipality || el.tags.city || '';
+            const iata = el.tags.iata.toUpperCase();
+            const country = el.tags['addr:country'] || 'India';
+            
+            const labelParts = [name, city, country].filter(Boolean);
+            return {
+              label: labelParts.join(', '),
+              name,
+              city,
+              iata,
+              lat: el.lat || el.center?.lat,
+              lng: el.lon || el.center?.lng,
+              country
+            };
+          });
+
+        // Deduplicate by IATA code
+        const seenIata = new Set();
+        const deduplicated = [];
+        overpassMatches.forEach(item => {
+          if (!seenIata.has(item.iata)) {
+            seenIata.add(item.iata);
+            deduplicated.push(item);
+          }
+        });
+
+        setSuggestions(deduplicated.slice(0, 10));
+      } catch (err) {
+        console.warn('Overpass airport search failed, using Photon fallback:', err.message);
+        try {
+          const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery + ' airport')}&limit=15`;
+          const response = await axios.get(url);
+          const features = response.data.features || [];
+          const photonMatches = features
+            .filter(f => {
+              const props = f.properties || {};
+              const name = (props.name || '').toLowerCase();
+              const isAirportValue = props.osm_value === 'aerodrome' || props.osm_key === 'aeroway';
+              const isAuxiliary = name.includes('cargo') || name.includes('depot') || name.includes('bus') || name.includes('parking') || name.includes('hangar');
+              return isAirportValue && !isAuxiliary;
+            })
+            .map(f => {
+              const props = f.properties || {};
+              const geom = f.geometry || {};
+              const iata = (props.name.match(/\b[A-Z]{3}\b/) || [''])[0] || '';
+              return {
+                label: props.name + (props.city ? `, ${props.city}` : ''),
+                name: props.name,
+                city: props.city || '',
+                iata: iata.toUpperCase(),
+                lat: geom.coordinates[1],
+                lng: geom.coordinates[0],
+                country: props.country || ''
+              };
+            });
+
+          const seenIata = new Set();
+          const deduplicated = [];
+          photonMatches.forEach(item => {
+            if (item.iata && seenIata.has(item.iata)) return;
+            if (item.iata) seenIata.add(item.iata);
+            deduplicated.push(item);
+          });
+          setSuggestions(deduplicated.slice(0, 10));
+        } catch (err2) {
+          console.error(err2);
+          setSuggestions([]);
+        }
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 450);
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery, vehicleType]);
+
   // Dynamic Route & Pricing Calculations
   useEffect(() => {
-    const originInfo = findLocationInfo(origin);
-    const destInfo = findLocationInfo(destination);
-    
-    if (originInfo && destInfo && origin.trim() && destination.trim()) {
+    const originInfo = typeof origin === 'object' ? origin : findLocationInfo(origin);
+    const destInfo = typeof destination === 'object' ? destination : findLocationInfo(destination);
+
+    const oLabel = typeof origin === 'object' ? origin.label : origin;
+    const dLabel = typeof destination === 'object' ? destination.label : destination;
+
+    if (originInfo && destInfo && oLabel && dLabel && oLabel.trim() && dLabel.trim()) {
       const oCountry = originInfo.country || '';
       const dCountry = destInfo.country || '';
       const cross = oCountry.toLowerCase() !== dCountry.toLowerCase() && oCountry && dCountry;
-      
+
       setIsCrossCountry(cross);
       let currentVehicle = vehicleType;
       if (cross) {
         setVehicleType('plane');
         currentVehicle = 'plane';
       }
-      
+
       const dist = getHaversineDistance(originInfo.lat, originInfo.lng, destInfo.lat, destInfo.lng);
       setEstimatedDistance(dist);
-      
+
       let cost = 0;
       if (currentVehicle === 'plane') {
         cost = Math.round(dist * 8 + 2000);
@@ -551,7 +730,9 @@ const Dashboard = () => {
 
   const handleGenerateItinerary = async (e) => {
     e.preventDefault();
-    if (!origin || !destination || !startDate || !endDate) return;
+    const oLabel = typeof origin === 'object' ? origin.label : origin;
+    const dLabel = typeof destination === 'object' ? destination.label : destination;
+    if (!oLabel || !dLabel || !startDate || !endDate) return;
 
     try {
       setIsGenerating(true);
@@ -559,18 +740,18 @@ const Dashboard = () => {
       setLogIndex(0);
 
       // Trigger backend call
-      const originInfo = findLocationInfo(origin);
-      const destInfo = findLocationInfo(destination);
+      const originInfo = typeof origin === 'object' ? origin : findLocationInfo(origin);
+      const destInfo = typeof destination === 'object' ? destination : findLocationInfo(destination);
       const payload = {
-        origin: { 
-          label: origin, 
-          lat: originInfo ? originInfo.lat : 28.6139, 
-          lng: originInfo ? originInfo.lng : 77.2090 
+        origin: {
+          label: oLabel,
+          lat: originInfo ? originInfo.lat : 28.6139,
+          lng: originInfo ? originInfo.lng : 77.2090
         },
-        destination: { 
-          label: destination, 
-          lat: destInfo ? destInfo.lat : 26.9124, 
-          lng: destInfo ? destInfo.lng : 75.7873 
+        destination: {
+          label: dLabel,
+          lat: destInfo ? destInfo.lat : 26.9124,
+          lng: destInfo ? destInfo.lng : 75.7873
         },
         startDate,
         endDate,
@@ -606,6 +787,8 @@ const Dashboard = () => {
 
   // ─── RENDERING 1: Agent Console Loading View (Image 6) ───────────
   if (isGenerating) {
+    const oLabel = typeof origin === 'object' ? origin.label : origin;
+    const dLabel = typeof destination === 'object' ? destination.label : destination;
     return (
       <LandingLayout>
         <div className="max-w-[1280px] mx-auto px-margin-mobile md:px-margin-desktop py-12 space-y-8 flex-grow">
@@ -650,7 +833,7 @@ const Dashboard = () => {
             <div className="lg:col-span-4 space-y-6">
               <div className="bg-white rounded-2xl border border-[#E5DED4] p-6 shadow-sm space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-[#FAF6F0]">
-                  <h3 className="font-headline-md text-lg text-[#0B1226]">{origin || 'Start'} → {destination || 'Destination'}</h3>
+                  <h3 className="font-headline-md text-lg text-[#0B1226]">{oLabel || 'Start'} → {dLabel || 'Destination'}</h3>
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-xs">
@@ -708,22 +891,80 @@ const Dashboard = () => {
         {/* Form Container */}
         <form onSubmit={handleGenerateItinerary} className="bg-white rounded-2xl p-8 border border-[#E5DED4] shadow-sm space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Origin */}
-            <AutocompleteInput
-              label="Origin"
-              value={origin}
-              onChange={setOrigin}
-              placeholder="e.g. Mumbai, India"
-              icon="flight_takeoff"
-            />
-            {/* Destination */}
-            <AutocompleteInput
-              label="Destination"
-              value={destination}
-              onChange={setDestination}
-              placeholder="e.g. Kyoto, Japan"
-              icon="flight_land"
-            />
+            {vehicleType === 'plane' ? (
+              <div className="col-span-1 sm:col-span-2 space-y-1.5">
+                <label className="font-label-caps text-[10px] text-outline uppercase tracking-wider">Flight Route</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 border border-[#D1C7BD] rounded-xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x divide-[#D1C7BD] bg-white relative shadow-sm">
+                  {/* From Box */}
+                  <div className="p-4 cursor-pointer hover:bg-[#FAF6F0] transition-colors relative flex-1 min-h-[84px] flex flex-col justify-center" onClick={() => setActiveSearch('origin')}>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider">From</p>
+                    {origin ? (
+                      <>
+                        <h4 className="text-xl font-extrabold text-[#0B1226] mt-1">{typeof origin === 'object' ? (origin.city || origin.label.split(',')[0]) : origin}</h4>
+                        <p className="text-xs text-on-surface-variant font-semibold mt-0.5 truncate">
+                          {typeof origin === 'object' && origin.iata ? `${origin.iata}, ${origin.name || origin.label}` : (typeof origin === 'object' ? origin.label : '')}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <h4 className="text-xl font-extrabold text-outline-variant mt-1">Select Airport</h4>
+                        <p className="text-xs text-outline-variant font-semibold mt-0.5">Choose departure airport</p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* To Box */}
+                  <div className="p-4 cursor-pointer hover:bg-[#FAF6F0] transition-colors relative flex-1 min-h-[84px] flex flex-col justify-center" onClick={() => setActiveSearch('destination')}>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider">To</p>
+                    {destination ? (
+                      <>
+                        <h4 className="text-xl font-extrabold text-[#0B1226] mt-1">{typeof destination === 'object' ? (destination.city || destination.label.split(',')[0]) : destination}</h4>
+                        <p className="text-xs text-on-surface-variant font-semibold mt-0.5 truncate">
+                          {typeof destination === 'object' && destination.iata ? `${destination.iata}, ${destination.name || destination.label}` : (typeof destination === 'object' ? destination.label : '')}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <h4 className="text-xl font-extrabold text-outline-variant mt-1">Select Airport</h4>
+                        <p className="text-xs text-outline-variant font-semibold mt-0.5">Choose destination airport</p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Swap Button icon */}
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const temp = origin;
+                      setOrigin(destination);
+                      setDestination(temp);
+                    }}
+                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-[#D1C7BD] rounded-full flex items-center justify-center hover:bg-[#FAF6F0] hover:text-primary transition-colors cursor-pointer z-10 shadow-sm hidden sm:flex"
+                  >
+                    <span className="material-symbols-outlined text-sm rotate-90 sm:rotate-0">sync_alt</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Origin */}
+                <AutocompleteInput
+                  label="Origin"
+                  value={origin}
+                  onChange={setOrigin}
+                  placeholder="e.g. Mumbai, India"
+                  icon="flight_takeoff"
+                />
+                {/* Destination */}
+                <AutocompleteInput
+                  label="Destination"
+                  value={destination}
+                  onChange={setDestination}
+                  placeholder="e.g. Kyoto, Japan"
+                  icon="flight_land"
+                />
+              </>
+            )}
             {/* Start Date */}
             <div className="flex flex-col gap-1.5">
               <label className="font-label-caps text-[10px] text-outline uppercase tracking-wider">Start Date</label>
@@ -757,10 +998,10 @@ const Dashboard = () => {
               <label className="font-label-caps text-[10px] text-outline uppercase tracking-wider">Vehicle Type</label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant text-sm">
-                  {vehicleType === 'plane' ? 'flight' : 
-                   vehicleType === 'car' ? 'directions_car' : 
-                   vehicleType === 'bus' ? 'directions_bus' : 
-                   'directions_bike'}
+                  {vehicleType === 'plane' ? 'flight' :
+                    vehicleType === 'car' ? 'directions_car' :
+                      vehicleType === 'bus' ? 'directions_bus' :
+                        'directions_bike'}
                 </span>
                 <select
                   value={vehicleType}
@@ -811,8 +1052,84 @@ const Dashboard = () => {
           </button>
         </form>
 
+        {activeSearch && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md p-6 border border-[#E5DED4] shadow-2xl relative space-y-4">
+              <div className="flex justify-between items-center pb-2 border-b border-[#FAF6F0]">
+                <h3 className="font-bold text-sm text-[#0B1226] uppercase">
+                  Select {activeSearch === 'origin' ? 'Departure' : 'Destination'} Airport
+                </h3>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setActiveSearch(null);
+                    setSearchQuery('');
+                    setSuggestions([]);
+                  }}
+                  className="text-outline hover:text-[#0B1226] text-xs font-bold"
+                >
+                  Close
+                </button>
+              </div>
+              
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant text-sm">search</span>
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Type city, airport name, or code..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-12 pl-10 pr-4 rounded-xl border border-[#D1C7BD] bg-white focus:border-primary transition-all outline-none text-sm font-semibold text-[#0B1226]"
+                />
+                {searchLoading && (
+                  <span className="absolute right-3 top-4 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                )}
+              </div>
+
+              <div className="max-h-60 overflow-y-auto divide-y divide-[#FAF6F0]">
+                {suggestions.length > 0 ? (
+                  suggestions.map((loc, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        if (activeSearch === 'origin') {
+                          setOrigin(loc);
+                        } else {
+                          setDestination(loc);
+                        }
+                        setActiveSearch(null);
+                        setSearchQuery('');
+                        setSuggestions([]);
+                      }}
+                      className="py-3 px-2 hover:bg-[#FAF6F0] cursor-pointer flex justify-between items-center transition-colors"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm text-[#0B1226]">{loc.city || loc.label.split(',')[0]}</span>
+                        <span className="text-xs text-on-surface-variant mt-0.5">{loc.name || loc.label}</span>
+                      </div>
+                      {loc.iata && (
+                        <span className="bg-[#ffa630]/20 text-[#6b4000] border border-[#ffa630]/30 px-2 py-0.5 rounded text-[10px] font-bold font-mono">
+                          {loc.iata}
+                        </span>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-xs text-outline-variant font-semibold">
+                    {searchQuery.trim().length >= 3 ? 'No airports found' : 'Type at least 3 characters to search...'}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Amalfi Coast Trending Card */}
-        <div 
+        <div
           onClick={handlePrefillAmalfi}
           className="bg-white rounded-2xl border border-[#E5DED4] overflow-hidden shadow-sm flex flex-col md:flex-row hover:shadow-md transition-shadow cursor-pointer group"
         >
@@ -840,9 +1157,9 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex-1 min-h-[200px] md:min-h-0 relative">
-            <img 
-              src="https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=400&q=80" 
-              alt="Amalfi Coast" 
+            <img
+              src="https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=400&q=80"
+              alt="Amalfi Coast"
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             />
           </div>
@@ -971,7 +1288,7 @@ const SignupPage = () => {
                   value={signupPassword}
                   onChange={(e) => setSignupPassword(e.target.value)}
                 />
-                
+
                 {/* Password requirements visual indicator */}
                 <div className="mt-2 space-y-1.5 text-xs text-on-surface-variant/80 ml-1">
                   <p className="font-bold font-label-caps text-[10px] text-outline uppercase tracking-wider mb-1">Requirements</p>
@@ -1025,7 +1342,7 @@ const SignupPage = () => {
 
           {!signupSuccess && (
             <div className="mt-8 font-body-md text-on-surface-variant">
-              Already have an account? 
+              Already have an account?
               <button onClick={() => navigate('/login')} className="text-primary font-semibold hover:underline cursor-pointer ml-1">Log In</button>
             </div>
           )}
@@ -1152,7 +1469,7 @@ const LoginPage = () => {
 
           {!loginSuccess && (
             <div className="mt-8 font-body-md text-on-surface-variant">
-              New to Journeys? 
+              New to Journeys?
               <button onClick={() => navigate('/signup')} className="text-primary font-semibold hover:underline cursor-pointer ml-1">Create an account</button>
             </div>
           )}
@@ -1170,7 +1487,7 @@ const LoginPage = () => {
 // ─── Component 5: Router Content Wrapper ───
 const RouterContent = () => {
   const { isAuthModalOpen, authModalMessage, closeAuthModal } = useAuth();
-  
+
   return (
     <>
       <Routes>
@@ -1194,7 +1511,7 @@ const RouterContent = () => {
         <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
         <Route path="/reviews/:itineraryId" element={<ProtectedRoute><ReviewsPage /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} />
-        
+
         {/* Premium Core Route Pages */}
         <Route path="/destination/:slug" element={<DestinationDetailPage />} />
         <Route path="/help" element={<HelpCenterPage />} />

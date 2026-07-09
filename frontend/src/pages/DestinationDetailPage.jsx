@@ -273,7 +273,7 @@ const DestinationDetailPage = () => {
           
           {/* Tab Navigation */}
           <div className="flex border-b border-[#E5DED4] overflow-x-auto gap-6 font-label-caps text-xs font-bold scrollbar-none pb-0.5">
-            {['overview', 'things-to-do', 'where-to-stay', 'reviews', 'tips'].map((tab) => (
+            {['overview', 'gallery', 'things-to-do', 'where-to-stay', 'reviews', 'tips'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -340,6 +340,63 @@ const DestinationDetailPage = () => {
                     </span>
                     <span className="text-[11px] text-outline-variant">{destination.weather?.monsoon?.conditions || 'Rainy'}</span>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Gallery Tab */}
+            {activeTab === 'gallery' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#FAF6F0]">
+                  <h3 className="font-display-lg text-xl text-[#0B1226]">Photo Gallery</h3>
+                  <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold uppercase">
+                    📸 {((destination.images?.gallery?.length || 0) + (destination.images?.hero ? 1 : 0) + (destination.images?.thumbnail ? 1 : 0))} Photos
+                  </span>
+                </div>
+                
+                {/* Visual Grid of images */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {/* Hero Image */}
+                  {destination.images?.hero && (
+                    <div className="group relative overflow-hidden rounded-2xl border border-[#E5DED4] aspect-[4/3] bg-[#FAF6F0] shadow-sm">
+                      <img
+                        src={destination.images.hero}
+                        alt={`${destination.name} Hero`}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-[#0B1226]/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                        <span className="text-white text-xs font-bold font-label-caps uppercase tracking-wider">Main Cover View</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Thumbnail Image */}
+                  {destination.images?.thumbnail && (
+                    <div className="group relative overflow-hidden rounded-2xl border border-[#E5DED4] aspect-[4/3] bg-[#FAF6F0] shadow-sm">
+                      <img
+                        src={destination.images.thumbnail}
+                        alt={`${destination.name} Thumbnail`}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-[#0B1226]/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                        <span className="text-white text-xs font-bold font-label-caps uppercase tracking-wider">Card Preview</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Gallery List */}
+                  {destination.images?.gallery?.map((imgUrl, i) => (
+                    <div key={i} className="group relative overflow-hidden rounded-2xl border border-[#E5DED4] aspect-[4/3] bg-[#FAF6F0] shadow-sm">
+                      <img
+                        src={imgUrl}
+                        alt={`${destination.name} Gallery ${i + 1}`}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-[#0B1226]/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                        <span className="text-white text-xs font-bold font-label-caps uppercase tracking-wider">Gallery View {i + 1}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

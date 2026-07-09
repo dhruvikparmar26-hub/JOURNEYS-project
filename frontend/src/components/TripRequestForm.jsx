@@ -1,55 +1,78 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { loadGoogleMaps } from '../utils/maps.js';
 import api from '../utils/api.js';
 import Card from './ui/Card.jsx';
 import Button from './ui/Button.jsx';
 import StatusPill from './ui/StatusPill.jsx';
-import { Compass, MapPin, Calendar, AlertCircle, CheckCircle, Navigation } from 'lucide-react';
+import { Compass, MapPin, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 
 /**
  * TripRequestForm
  *
  * Implements:
- * - Dynamic Google Maps API loader
- * - Browser geolocation reverse geocoding with geocode fallback
- * - Restricted Places Autocomplete (India only) for origin/destination
- * - Custom styled green double budget range slider (min/max)
+ * - Photon API (OpenStreetMap) Autocomplete search for origin/destination
+ * - Nominatim reverse geocoding for browser geolocation detection
+ * - Custom styled double budget range slider (min/max)
  * - Date validation
  * - Public submission handler (saves guestId or userId)
  */
 const TripRequestForm = ({ onSubmitSuccess }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [mapsLoaded, setMapsLoaded] = useState(false);
-  const [apiKey, setApiKey] = useState('');
   
   // Form input fields
   const [origin, setOrigin] = useState({ lat: null, lng: null, label: '' });
-  const [destination, setDestination] = useState({ lat: null, lng: null, label: '', placeId: '' });
+  const [destination, setDestination] = useState({ lat: null, lng: null, label: '' });
 
+  // Autocomplete UI state
+  const [originSearch, setOriginSearch] = useState('');
+  const [destinationSearch, setDestinationSearch] = useState('');
+  const [originSuggestions, setOriginSuggestions] = useState([]);
+  const [destinationSuggestions, setDestinationSuggestions] = useState([]);
+  const [showOriginDropdown, setShowOriginDropdown] = useState(false);
+  const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
+  const [originLoading, setOriginLoading] = useState(false);
+  const [destinationLoading, setDestinationLoading] = useState(false);
+
+  const originContainerRef = useRef(null);
+  const destinationContainerRef = useRef(null);
+  
   // Prefill state values if passed from landing page or explore page
   useEffect(() => {
     if (location.state?.prefillDestination) {
-      setDestination(prev => ({
-        ...prev,
-        label: location.state.prefillDestination
-      }));
+      const label = location.state.prefillDestination;
+      setDestinationSearch(label);
+      setDestination(prev => ({ ...prev, label }));
+      triggerPhotonSearch(label, 'destination');
     }
     if (location.state?.prefillFrom) {
-      setOrigin(prev => ({
-        ...prev,
-        label: location.state.prefillFrom
-      }));
+      const label = location.state.prefillFrom;
+      setOriginSearch(label);
+      setOrigin(prev => ({ ...prev, label }));
+      triggerPhotonSearch(label, 'origin');
     }
     if (location.state?.prefillTo) {
-      setDestination(prev => ({
-        ...prev,
-        label: location.state.prefillTo
-      }));
+      const label = location.state.prefillTo;
+      setDestinationSearch(label);
+      setDestination(prev => ({ ...prev, label }));
+      triggerPhotonSearch(label, 'destination');
     }
   }, [location.state]);
+
+  // Click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (originContainerRef.current && !originContainerRef.current.contains(event.target)) {
+        setShowOriginDropdown(false);
+      }
+      if (destinationContainerRef.current && !destinationContainerRef.current.contains(event.target)) {
+        setShowDestinationDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   // Date states (default to tomorrow and next week)
   const getTomorrowDate = () => {
@@ -79,68 +102,85 @@ const TripRequestForm = ({ onSubmitSuccess }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // DOM Refs for autocomplete
-  const originInputRef = useRef(null);
-  const destinationInputRef = useRef(null);
+  // ─── Autocomplete logic using Photon API ──────────────────────────
+  const triggerPhotonSearch = async (query, type) => {
+    if (!query || query.trim().length < 3) {
+      if (type === 'origin') setOriginSuggestions([]);
+      else setDestinationSuggestions([]);
+      return;
+    }
 
-  // ─── Phase 1: Load Google Maps script on mount ───────────────────
-  useEffect(() => {
-    loadGoogleMaps()
-      .then((maps) => {
-        if (maps) {
-          setMapsLoaded(true);
-          // Retrieve the loaded API key from Config Endpoint
-          api.get('/config').then(({ data }) => {
-            setApiKey(data.googleMapsApiKey);
-          });
-        }
-      })
-      .catch((err) => {
-        console.error('Google Maps initialization failed:', err);
+    const setLoader = type === 'origin' ? setOriginLoading : setDestinationLoading;
+    const setSuggestions = type === 'origin' ? setOriginSuggestions : setDestinationSuggestions;
+
+    setLoader(true);
+    try {
+      // Photon is a search engine for OpenStreetMap data
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8`;
+      const response = await axios.get(url);
+      
+      const features = response.data.features || [];
+      const suggestions = features.map(feature => {
+        const props = feature.properties || {};
+        const geom = feature.geometry || {};
+        
+        // Build a nice descriptive address label
+        const addressParts = [
+          props.name,
+          props.city || props.town || props.village,
+          props.state,
+          props.country
+        ].filter(Boolean);
+
+        // Deduplicate adjacent identical parts
+        const labelParts = [];
+        addressParts.forEach(part => {
+          if (!labelParts.includes(part)) {
+            labelParts.push(part);
+          }
+        });
+
+        return {
+          label: labelParts.join(', '),
+          lat: geom.coordinates[1],
+          lng: geom.coordinates[0],
+        };
       });
-  }, []);
 
-  // ─── Phase 2: Autocomplete initialization ────────────────────────
-  useEffect(() => {
-    if (!mapsLoaded || !window.google?.maps?.places) return;
+      setSuggestions(suggestions);
+    } catch (err) {
+      console.warn(`Photon search failed for ${type}:`, err.message);
+    } finally {
+      setLoader(false);
+    }
+  };
 
-    // 1. Initialize Autocomplete for Origin
-    const originAutocomplete = new window.google.maps.places.Autocomplete(originInputRef.current, {
-      componentRestrictions: { country: 'in' },
-      fields: ['geometry', 'formatted_address', 'name'],
-    });
+  // Debouncing or handling typing updates
+  const handleOriginChange = (e) => {
+    const val = e.target.value;
+    setOriginSearch(val);
+    setOrigin(prev => ({ ...prev, label: val, lat: null, lng: null }));
+    setShowOriginDropdown(true);
+    
+    const timeoutId = setTimeout(() => {
+      triggerPhotonSearch(val, 'origin');
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  };
 
-    originAutocomplete.addListener('place_changed', () => {
-      const place = originAutocomplete.getPlace();
-      if (place.geometry?.location) {
-        setOrigin({
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-          label: place.formatted_address || place.name || '',
-        });
-      }
-    });
+  const handleDestinationChange = (e) => {
+    const val = e.target.value;
+    setDestinationSearch(val);
+    setDestination(prev => ({ ...prev, label: val, lat: null, lng: null }));
+    setShowDestinationDropdown(true);
 
-    // 2. Initialize Autocomplete for Destination (restriced to India)
-    const destinationAutocomplete = new window.google.maps.places.Autocomplete(destinationInputRef.current, {
-      componentRestrictions: { country: 'in' },
-      fields: ['geometry', 'formatted_address', 'name', 'place_id'],
-    });
+    const timeoutId = setTimeout(() => {
+      triggerPhotonSearch(val, 'destination');
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  };
 
-    destinationAutocomplete.addListener('place_changed', () => {
-      const place = destinationAutocomplete.getPlace();
-      if (place.geometry?.location) {
-        setDestination({
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-          label: place.formatted_address || place.name || '',
-          placeId: place.place_id || '',
-        });
-      }
-    });
-  }, [mapsLoaded]);
-
-  // ─── Phase 3: Automatic Geolocation & Reverse Geocoding ──────────
+  // ─── Automatic Geolocation & Reverse Geocoding via Nominatim ──────
   useEffect(() => {
     if (!navigator.geolocation) return;
 
@@ -150,51 +190,44 @@ const TripRequestForm = ({ onSubmitSuccess }) => {
         const { latitude, longitude } = position.coords;
 
         try {
-          // Fetch API key dynamically if not already saved
-          let currentKey = apiKey;
-          if (!currentKey) {
-            const { data } = await api.get('/config');
-            currentKey = data.googleMapsApiKey;
-          }
-
-          if (currentKey) {
-            const response = await axios.get(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${currentKey}`
-            );
-            
-            if (response.data.results?.[0]) {
-              const formattedAddress = response.data.results[0].formatted_address;
-              // Extract city if possible
-              const addressComponents = response.data.results[0].address_components;
-              const cityComp = addressComponents.find(c => c.types.includes('locality'));
-              const stateComp = addressComponents.find(c => c.types.includes('administrative_area_level_1'));
-              const label = cityComp && stateComp 
-                ? `${cityComp.long_name}, ${stateComp.short_name}` 
-                : formattedAddress;
-
-              setOrigin({ lat: latitude, lng: longitude, label });
-              if (originInputRef.current) {
-                originInputRef.current.value = label;
+          // Fetch reverse geocode details from OpenStreetMap Nominatim
+          const response = await axios.get(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            {
+              headers: {
+                'User-Agent': 'JourneysTravelPlannerAgent/1.0'
               }
-            } else {
-              // Fallback to coordinates label if reverse geocoding returns no result
-              setOrigin({ lat: latitude, lng: longitude, label: 'Current Geolocation' });
-              if (originInputRef.current) originInputRef.current.value = 'Current Geolocation';
             }
+          );
+          
+          if (response.data) {
+            const displayName = response.data.display_name;
+            const address = response.data.address || {};
+            const city = address.city || address.town || address.village || address.county;
+            const state = address.state;
+            const label = city && state ? `${city}, ${state}` : displayName;
+
+            setOrigin({ lat: latitude, lng: longitude, label });
+            setOriginSearch(label);
+          } else {
+            setOrigin({ lat: latitude, lng: longitude, label: 'Current Geolocation' });
+            setOriginSearch('Current Geolocation');
           }
         } catch (err) {
-          console.warn('Geolocation reverse geocoding failed:', err);
+          console.warn('OSM Reverse geocoding failed:', err);
+          setOrigin({ lat: latitude, lng: longitude, label: 'Current Geolocation' });
+          setOriginSearch('Current Geolocation');
         } finally {
           setGeoLoading(false);
         }
       },
       (err) => {
-        console.info('Geolocation permission denied or timed out. Falling back to manual prefill.');
+        console.info('Geolocation denied or timed out.');
         setGeoLoading(false);
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
-  }, [apiKey]);
+  }, []);
 
   // Handle budget dual slider adjustments
   const handleMinChange = (e) => {
@@ -261,7 +294,7 @@ const TripRequestForm = ({ onSubmitSuccess }) => {
             <Compass className="w-5 h-5 text-accent-gold" />
             Where to next?
           </h2>
-          <p className="text-xs text-text-secondary mt-1">Design your custom route planner across India corridors.</p>
+          <p className="text-xs text-text-secondary mt-1">Design your custom route planner (powered by OpenStreetMap).</p>
         </div>
         {geoLoading && (
           <StatusPill label="Locating..." color="blue" pulsing={true} />
@@ -283,46 +316,92 @@ const TripRequestForm = ({ onSubmitSuccess }) => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* 1. Origin */}
-        <div className="space-y-1.5">
+        {/* 1. Origin Input */}
+        <div className="space-y-1.5 relative" ref={originContainerRef}>
           <label className="label-system text-[#8e9192]">
             Current Location / Start Point
           </label>
           <div className="relative">
             <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8e9192] pointer-events-none" />
             <input
-              ref={originInputRef}
               type="text"
-              defaultValue={origin.label}
-              onChange={(e) => setOrigin(prev => ({ ...prev, label: e.target.value, lat: null }))}
+              value={originSearch}
+              onChange={handleOriginChange}
+              onFocus={() => setShowOriginDropdown(true)}
               placeholder="Search start city, hotel, or landmark..."
               className="w-full bg-[#0e0e0e] border border-[#4d4635] focus:border-[#eac249] focus:ring-0 rounded pl-12 pr-4 py-3 text-sm font-semibold text-[#e5e2e1] placeholder:text-[#8e9192]/70 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.6),inset_-1px_-1px_2px_rgba(255,255,255,0.05)] transition-colors"
               required
             />
-            {geoLoading && (
+            {(geoLoading || originLoading) && (
               <span className="absolute right-4 top-3.5 flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#eac249] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-[#eac249]"></span>
               </span>
             )}
           </div>
+
+          {/* Origin Autocomplete Dropdown */}
+          {showOriginDropdown && originSuggestions.length > 0 && (
+            <div className="absolute left-0 right-0 mt-1 bg-[#161616] border border-[#4d4635] rounded shadow-2xl z-50 max-h-60 overflow-y-auto">
+              {originSuggestions.map((suggestion, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    setOrigin(suggestion);
+                    setOriginSearch(suggestion.label);
+                    setShowOriginDropdown(false);
+                  }}
+                  className="px-4 py-2.5 text-xs font-semibold text-[#e5e2e1] hover:bg-[#eac249] hover:text-[#131313] cursor-pointer transition-colors border-b border-[#2a2a2a] last:border-0"
+                >
+                  {suggestion.label}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 2. Destination Input */}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 relative" ref={destinationContainerRef}>
           <label className="label-system text-[#8e9192]">
-            Destination in India
+            Destination
           </label>
           <div className="relative">
             <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8e9192] pointer-events-none" />
             <input
-              ref={destinationInputRef}
               type="text"
+              value={destinationSearch}
+              onChange={handleDestinationChange}
+              onFocus={() => setShowDestinationDropdown(true)}
               placeholder="Search destination city, attraction, or airport..."
               className="w-full bg-[#0e0e0e] border border-[#4d4635] focus:border-[#eac249] focus:ring-0 rounded pl-12 pr-4 py-3 text-sm font-semibold text-[#e5e2e1] placeholder:text-[#8e9192]/70 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.6),inset_-1px_-1px_2px_rgba(255,255,255,0.05)] transition-colors"
               required
             />
+            {destinationLoading && (
+              <span className="absolute right-4 top-3.5 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#eac249] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-[#eac249]"></span>
+              </span>
+            )}
           </div>
+
+          {/* Destination Autocomplete Dropdown */}
+          {showDestinationDropdown && destinationSuggestions.length > 0 && (
+            <div className="absolute left-0 right-0 mt-1 bg-[#161616] border border-[#4d4635] rounded shadow-2xl z-50 max-h-60 overflow-y-auto">
+              {destinationSuggestions.map((suggestion, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    setDestination(suggestion);
+                    setDestinationSearch(suggestion.label);
+                    setShowDestinationDropdown(false);
+                  }}
+                  className="px-4 py-2.5 text-xs font-semibold text-[#e5e2e1] hover:bg-[#eac249] hover:text-[#131313] cursor-pointer transition-colors border-b border-[#2a2a2a] last:border-0"
+                >
+                  {suggestion.label}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 3. Date Range */}

@@ -72,7 +72,7 @@ const DestinationSchema = new Schema(
     },
     categories: [{
       type: String,
-      enum: ['beach', 'mountain', 'city', 'heritage', 'adventure', 'spiritual', 'wildlife', 'desert', 'lake', 'hill-station', 'island', 'backpacking'],
+      enum: ['beach', 'mountain', 'city', 'heritage', 'adventure', 'spiritual', 'wildlife', 'desert', 'lake', 'hill-station', 'island', 'backpacking', 'nature'],
     }],
     weather: {
       summer: { avgTemp: Number, conditions: String },

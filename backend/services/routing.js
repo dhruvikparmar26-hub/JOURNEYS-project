@@ -101,75 +101,23 @@ export const getRouteMatrix = async (origin, destination) => {
     };
   }
 
-  // 2. Call Google Routes API
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey || apiKey.startsWith('AIzaSyDummy')) {
-    // No valid API key — estimate using Haversine straight-line distance × 1.35
-    const straightLineKm = haversineKm(origin.lat, origin.lng, destination.lat, destination.lng);
-    const estimatedKm = Math.round(straightLineKm * 1.35); // road factor
-    const estimatedMeters = estimatedKm * 1000;
-    const estimatedDuration = Math.round((estimatedKm / 60) * 3600); // ~60 km/h avg
-
-    // Cache the estimate
-    await RouteCache.create({
-      originLatRounded: oLat,
-      originLngRounded: oLng,
-      destLatRounded: dLat,
-      destLngRounded: dLng,
-      distanceMeters: estimatedMeters,
-      durationSeconds: estimatedDuration,
+  // 2. Call OSRM API
+  try {
+    const url = `http://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=false`;
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'JourneysTravelPlannerAgent/1.0'
+      },
+      timeout: 10000
     });
 
-    return {
-      distanceMeters: estimatedMeters,
-      durationSeconds: estimatedDuration,
-      distanceKm: estimatedKm,
-      source: 'haversine-estimate',
-    };
-  }
-
-  try {
-    const response = await axios.post(
-      'https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix',
-      {
-        origins: [
-          {
-            waypoint: {
-              location: {
-                latLng: { latitude: origin.lat, longitude: origin.lng },
-              },
-            },
-          },
-        ],
-        destinations: [
-          {
-            waypoint: {
-              location: {
-                latLng: { latitude: destination.lat, longitude: destination.lng },
-              },
-            },
-          },
-        ],
-        travelMode: 'DRIVE',
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'originIndex,destinationIndex,distanceMeters,duration',
-        },
-        timeout: 10000,
-      }
-    );
-
-    const element = response.data?.[0];
-    if (!element || element.distanceMeters == null) {
-      throw new Error('Routes API returned no results for this pair');
+    const route = response.data?.routes?.[0];
+    if (!route) {
+      throw new Error('OSM/OSRM API returned no results for this pair');
     }
 
-    const distanceMeters = element.distanceMeters;
-    const durationStr = element.duration || '0s';
-    const durationSeconds = parseInt(durationStr.replace('s', ''), 10) || 0;
+    const distanceMeters = Math.round(route.distance);
+    const durationSeconds = Math.round(route.duration);
 
     // 3. Cache the result
     await RouteCache.create({
@@ -185,10 +133,10 @@ export const getRouteMatrix = async (origin, destination) => {
       distanceMeters,
       durationSeconds,
       distanceKm: Math.round(distanceMeters / 1000),
-      source: 'google-routes-api',
+      source: 'osm-osrm-api',
     };
   } catch (error) {
-    console.error('Google Routes API error:', error.message);
+    console.error('OSM/OSRM API error:', error.message);
     // Fallback to Haversine estimate on API failure
     const straightLineKm = haversineKm(origin.lat, origin.lng, destination.lat, destination.lng);
     const estimatedKm = Math.round(straightLineKm * 1.35);

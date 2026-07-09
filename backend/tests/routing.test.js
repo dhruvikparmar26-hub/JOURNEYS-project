@@ -63,7 +63,7 @@ const runTests = async () => {
     assert(result.distanceKm > 0, `Distance is positive (got ${result.distanceKm}km)`);
     assert(result.durationSeconds > 0, `Duration is positive (got ${result.durationSeconds}s)`);
     assert(
-      ['google-routes-api', 'mongodb-cache', 'haversine-estimate', 'haversine-fallback'].includes(result.source),
+      ['google-routes-api', 'mongodb-cache', 'haversine-estimate', 'haversine-fallback', 'osm-osrm-api'].includes(result.source),
       `Source is valid (got ${result.source})`
     );
   }

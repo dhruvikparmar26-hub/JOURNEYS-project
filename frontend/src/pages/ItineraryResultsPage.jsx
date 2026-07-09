@@ -42,6 +42,8 @@ const ItineraryResultsPage = () => {
   const [paymentStep, setPaymentStep] = useState('select');
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [sendingReport, setSendingReport] = useState(false);
+  const [qrSeconds, setQrSeconds] = useState(300);
+  const [upiSubMethod, setUpiSubMethod] = useState('id'); // 'id' | 'qr'
 
   const handleOpenPlaceDetails = (place) => {
     setSelectedPlace(place);
@@ -93,6 +95,74 @@ Report generated successfully. Safe travels!`;
     }
   };
 
+  const handleProcessPayment = async () => {
+    setIsPaying(true);
+    setPaymentStep('processing');
+    
+    // Payment Processing Simulation
+    const steps = [
+      'Initiating transaction gateway...',
+      'Contacting payment processor...',
+      'Confirming transit seat reservations...',
+      'Generating booking confirmation stub...'
+    ];
+    
+    for (let i = 0; i < steps.length; i++) {
+      await new Promise(r => setTimeout(r, 800));
+    }
+    
+    const destinationLabel = itinerary.destinations?.[0] || itinerary.destination?.label || itinerary.destination || itinerary.title;
+    const promptData = itinerary.prompt ? (typeof itinerary.prompt === 'string' ? JSON.parse(itinerary.prompt) : itinerary.prompt) : {};
+    
+    try {
+      const pMethodLabel = paymentMethod === 'upi' ? `UPI ID: ${upiId}` : `Card: **** **** **** ${cardNumber.slice(-4)}`;
+      
+      // Create Booking in DB to update spend metrics
+      await api.post('/itineraries/bookings', {
+        itineraryId: itinerary._id,
+        itemName: `Trip Package to ${destinationLabel}`,
+        itemType: 'transport',
+        bookingDate: new Date(),
+        quantity: 1,
+        price: itinerary.totalCost || 18000,
+        currency: 'INR'
+      });
+
+      await api.post('/notifications', {
+        type: 'booking_confirmed',
+        message: `🎉 Ticket Booked! Your journey from ${promptData.origin?.label?.split(',')[0] || 'Delhi'} to ${destinationLabel?.split(',')[0] || 'Jaipur'} is confirmed. Total cost of ₹${(itinerary.totalCost || 18000).toLocaleString('en-IN')} paid successfully via ${pMethodLabel}.`,
+        relatedItineraryId: itinerary._id,
+        category: 'booking',
+        priority: 'urgent'
+      });
+      
+      await api.post('/notifications', {
+        type: 'itinerary_ready',
+        message: `📅 Day-to-day itinerary for ${destinationLabel} is now active. Total Days: ${itinerary.days?.length || 3}. Pack light and enjoy your journey!`,
+        relatedItineraryId: itinerary._id,
+        category: 'trip',
+        priority: 'high'
+      });
+      
+      try {
+        await api.patch(`/itineraries/${itinerary._id}`, { status: 'booked' });
+      } catch (statusErr) {
+        console.log('Ignore minor status error, fallback to local confirmation state');
+      }
+
+      setIsBooked(true);
+      setPaymentStep('success');
+      showSuccessToast('Tickets booked successfully!');
+    } catch (err) {
+      console.error(err);
+      showErrorToast('Failed to create booking notifications. Resuming local checkout simulation.');
+      setIsBooked(true);
+      setPaymentStep('success');
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
   const fetchItinerary = async () => {
     try {
       setLoading(true);
@@ -114,6 +184,27 @@ Report generated successfully. Safe travels!`;
   useEffect(() => {
     fetchItinerary();
   }, [id]);
+
+  useEffect(() => {
+    if (paymentStep !== 'qrcode') return;
+    setQrSeconds(300);
+    const interval = setInterval(() => {
+      setQrSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [paymentStep]);
+
+  const formatTime = (secs) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   const handleSave = async () => {
     try {
@@ -618,23 +709,45 @@ Report generated successfully. Safe travels!`;
                   
                   {paymentMethod === 'upi' ? (
                     <div className="space-y-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="font-label-caps text-[10px] text-outline uppercase tracking-wider">Enter UPI ID</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. aditya@upi"
-                          value={upiId}
-                          onChange={(e) => setUpiId(e.target.value)}
-                          className="w-full h-12 px-4 rounded-xl border border-[#D1C7BD] bg-white focus:border-primary transition-all outline-none text-sm font-semibold text-[#0B1226]"
-                        />
+                      {/* Sub-selector for UPI mode */}
+                      <div className="grid grid-cols-2 gap-2 p-1 bg-[#FAF6F0] rounded-xl border border-[#E5DED4]">
+                        <button
+                          type="button"
+                          onClick={() => setUpiSubMethod('id')}
+                          className={`py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors ${upiSubMethod === 'id' ? 'bg-[#0B1226] text-white' : 'bg-transparent text-outline hover:text-[#0B1226]'}`}
+                        >
+                          UPI ID Request
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUpiSubMethod('qr')}
+                          className={`py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors ${upiSubMethod === 'qr' ? 'bg-[#0B1226] text-white' : 'bg-transparent text-outline hover:text-[#0B1226]'}`}
+                        >
+                          Scan QR Code
+                        </button>
                       </div>
-                      <div className="flex items-center gap-4 bg-[#FAF6F0] p-4 rounded-xl border border-[#E5DED4]">
-                        <span className="material-symbols-outlined text-3xl text-outline">qr_code_2</span>
-                        <div className="text-[11px] text-on-surface-variant leading-relaxed">
-                          <p className="font-bold text-[#0B1226]">Scan QR Code on next step</p>
-                          <p>You can scan and pay using any UPI app like Google Pay, PhonePe, or Paytm.</p>
+
+                      {upiSubMethod === 'id' ? (
+                        <div className="flex flex-col gap-1.5 animate-fade-in">
+                          <label className="font-label-caps text-[10px] text-outline uppercase tracking-wider">Enter UPI ID</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. aditya@upi"
+                            value={upiId}
+                            onChange={(e) => setUpiId(e.target.value)}
+                            className="w-full h-12 px-4 rounded-xl border border-[#D1C7BD] bg-white focus:border-primary transition-all outline-none text-sm font-semibold text-[#0B1226]"
+                          />
+                          <p className="text-[10px] text-on-surface-variant italic">A collect request will be sent to this ID.</p>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-4 bg-[#FAF6F0] p-4 rounded-xl border border-[#E5DED4] animate-fade-in">
+                          <span className="material-symbols-outlined text-3xl text-outline">qr_code_2</span>
+                          <div className="text-[11px] text-on-surface-variant leading-relaxed">
+                            <p className="font-bold text-[#0B1226]">Scan QR Code on next step</p>
+                            <p>We will show a real dynamic QR Code linked to UPI ID: <strong>dhruvikparmar26@oksbi</strong>.</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -686,7 +799,7 @@ Report generated successfully. Safe travels!`;
                   </button>
                   <button
                     onClick={async () => {
-                      if (paymentMethod === 'upi' && !upiId.includes('@')) {
+                      if (paymentMethod === 'upi' && upiSubMethod === 'id' && !upiId.includes('@')) {
                         showErrorToast('Please enter a valid UPI ID');
                         return;
                       }
@@ -695,72 +808,144 @@ Report generated successfully. Safe travels!`;
                         return;
                       }
                       
-                      setIsPaying(true);
-                      setPaymentStep('processing');
-                      
-                      // Payment Processing Simulation
-                      const steps = [
-                        'Initiating transaction gateway...',
-                        'Contacting payment processor...',
-                        'Confirming transit seat reservations...',
-                        'Generating booking confirmation stub...'
-                      ];
-                      
-                      for (let i = 0; i < steps.length; i++) {
-                        await new Promise(r => setTimeout(r, 800));
-                      }
-                      
-                      try {
-                        const pMethodLabel = paymentMethod === 'upi' ? `UPI ID: ${upiId}` : `Card: **** **** **** ${cardNumber.slice(-4)}`;
-                        
-                        // Create Booking in DB to update spend metrics
-                        await api.post('/itineraries/bookings', {
-                          itineraryId: itinerary._id,
-                          itemName: `Trip Package to ${destinationLabel}`,
-                          itemType: 'transport',
-                          bookingDate: new Date(),
-                          quantity: 1,
-                          price: itinerary.totalCost || 18000,
-                          currency: 'INR'
-                        });
-
-                        await api.post('/notifications', {
-                          type: 'booking_confirmed',
-                          message: `🎉 Ticket Booked! Your journey from ${promptData.origin?.label?.split(',')[0] || 'Delhi'} to ${destinationLabel?.split(',')[0] || 'Jaipur'} is confirmed. Total cost of ₹${(itinerary.totalCost || 18000).toLocaleString('en-IN')} paid successfully via ${pMethodLabel}.`,
-                          relatedItineraryId: itinerary._id,
-                          category: 'booking',
-                          priority: 'urgent'
-                        });
-                        
-                        await api.post('/notifications', {
-                          type: 'itinerary_ready',
-                          message: `📅 Day-to-day itinerary for ${destinationLabel} is now active. Total Days: ${itinerary.days?.length || 3}. Pack light and enjoy your journey!`,
-                          relatedItineraryId: itinerary._id,
-                          category: 'trip',
-                          priority: 'high'
-                        });
-                        
-                        try {
-                          await api.patch(`/itineraries/${itinerary._id}`, { status: 'booked' });
-                        } catch (statusErr) {
-                          console.log('Ignore minor status error, fallback to local confirmation state');
+                      if (paymentMethod === 'upi') {
+                        if (upiSubMethod === 'id') {
+                          setPaymentStep('collect');
+                        } else {
+                          setPaymentStep('qrcode');
                         }
-
-                        setIsBooked(true);
-                        setPaymentStep('success');
-                        showSuccessToast('Tickets booked successfully!');
-                      } catch (err) {
-                        console.error(err);
-                        showErrorToast('Failed to create booking notifications. Resuming local checkout simulation.');
-                        setIsBooked(true);
-                        setPaymentStep('success');
-                      } finally {
-                        setIsPaying(false);
+                      } else {
+                        await handleProcessPayment();
                       }
                     }}
                     className="bg-[#ffa630] text-[#0B1226] font-bold px-6 py-2.5 rounded-lg hover:brightness-105 active:scale-95 transition-all text-xs uppercase tracking-wider font-label-caps cursor-pointer"
                   >
                     Pay & Book Tickets
+                  </button>
+                </div>
+              </>
+            )}
+            
+            {/* Step 1.5: QR Code Screen */}
+            {/* Step 1.4: UPI Collect Request Screen */}
+            {paymentStep === 'collect' && (
+              <>
+                <div className="bg-[#FAF6F0] p-6 border-b border-[#E5DED4] flex justify-between items-center">
+                  <h3 className="font-display-lg text-lg text-[#0B1226]">UPI Request Sent</h3>
+                  <button onClick={() => setShowPaymentModal(false)} className="text-outline hover:text-[#0B1226] cursor-pointer flex items-center">
+                    <span className="material-symbols-outlined text-xl">close</span>
+                  </button>
+                </div>
+                
+                <div className="p-6 flex flex-col items-center justify-center space-y-6 text-center">
+                  {/* Status Indicator */}
+                  <div className="w-16 h-16 rounded-full bg-[#ffa630]/10 border border-[#ffa630]/20 flex items-center justify-center text-[#ffa630] animate-pulse">
+                    <span className="material-symbols-outlined text-3xl">sms</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-sm text-[#0B1226] uppercase tracking-wider font-label-caps">Collect Request Sent</h4>
+                    <p className="text-xs text-on-surface-variant leading-relaxed max-w-xs mx-auto">
+                      We have sent a collect request of <strong className="text-[#0B1226]">₹{(itinerary?.totalCost || 18000).toLocaleString('en-IN')}</strong> to your UPI ID: <strong className="text-primary font-mono">{upiId}</strong>.
+                    </p>
+                  </div>
+
+                  <div className="w-full bg-[#FAF6F0] p-4 rounded-xl border border-[#E5DED4] text-xs space-y-1.5 text-left">
+                    <p className="font-bold text-[#0B1226]">How to Pay:</p>
+                    <ol className="list-decimal pl-4 space-y-1 text-on-surface-variant">
+                      <li>Open your UPI App (Google Pay, PhonePe, Paytm, etc.).</li>
+                      <li>Check the notifications or pending requests.</li>
+                      <li>Approve the request of ₹{(itinerary?.totalCost || 18000).toLocaleString('en-IN')} from <strong>dhruvikparmar26@oksbi</strong>.</li>
+                    </ol>
+                  </div>
+
+                  {/* QR Active timer */}
+                  <div className="text-xs font-semibold text-outline">
+                    Request expires in <span className="font-mono text-primary font-bold">{formatTime(qrSeconds)}</span>
+                  </div>
+                </div>
+
+                <div className="bg-[#FAF6F0]/50 p-4 border-t border-[#E5DED4] flex justify-between items-center gap-3">
+                  <button
+                    onClick={() => setPaymentStep('select')}
+                    className="bg-white border border-[#D1C7BD] text-[#0B1226] font-bold px-4 py-2.5 rounded-lg hover:bg-[#FAF6F0] text-xs uppercase tracking-wider font-label-caps cursor-pointer"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => handleProcessPayment()}
+                    className="bg-[#ffa630] text-[#0B1226] font-bold px-6 py-2.5 rounded-lg hover:brightness-105 active:scale-95 transition-all text-xs uppercase tracking-wider font-label-caps cursor-pointer flex-grow flex items-center justify-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">verified</span>
+                    Check Status / Confirm
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Step 1.5: QR Code Screen */}
+            {paymentStep === 'qrcode' && (
+              <>
+                <div className="bg-[#FAF6F0] p-6 border-b border-[#E5DED4] flex justify-between items-center">
+                  <h3 className="font-display-lg text-lg text-[#0B1226]">Scan to Pay</h3>
+                  <button onClick={() => setShowPaymentModal(false)} className="text-outline hover:text-[#0B1226] cursor-pointer flex items-center">
+                    <span className="material-symbols-outlined text-xl">close</span>
+                  </button>
+                </div>
+                
+                <div className="p-6 flex flex-col items-center space-y-6">
+                  {/* QR Timer */}
+                  <div className="w-full flex justify-between items-center bg-[#FAF6F0] px-4 py-2.5 rounded-xl border border-[#E5DED4] text-xs font-semibold text-[#0B1226]">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
+                      QR Code Active
+                    </span>
+                    <span className="font-mono text-primary font-bold">{formatTime(qrSeconds)}</span>
+                  </div>
+
+                  {/* QR Image */}
+                  <div className="bg-white p-3 rounded-2xl border-2 border-primary/20 shadow-md">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180&margin=5&data=${encodeURIComponent(
+                        `upi://pay?pa=dhruvikparmar26@oksbi&pn=Journeys%20Travel&am=${itinerary?.totalCost || 18000}&tn=Booking%20for%20${encodeURIComponent(
+                          itinerary?.destinations?.[0] || itinerary?.destination?.label || itinerary?.destination || itinerary?.title || 'Trip'
+                        )}&cu=INR`
+                      )}`} 
+                      alt="UPI QR Code" 
+                      className="w-[180px] h-[180px] object-contain"
+                    />
+                  </div>
+
+                  <div className="text-center space-y-1">
+                    <p className="text-sm font-bold text-[#0B1226]">₹{(itinerary?.totalCost || 18000).toLocaleString('en-IN')}</p>
+                    <p className="text-[10px] text-on-surface-variant font-medium">Scan using Google Pay, PhonePe, Paytm, or BHIM</p>
+                  </div>
+
+                  {/* UPI deep link button for mobile users */}
+                  <a
+                    href={`upi://pay?pa=dhruvikparmar26@oksbi&pn=Journeys%20Travel&am=${itinerary?.totalCost || 18000}&tn=Booking%20for%20${encodeURIComponent(
+                      itinerary?.destinations?.[0] || itinerary?.destination?.label || itinerary?.destination || itinerary?.title || 'Trip'
+                    )}&cu=INR`}
+                    className="sm:hidden text-xs bg-[#FAF6F0] text-primary border border-primary/30 py-2 px-4 rounded-lg font-bold hover:bg-primary/5 transition-colors cursor-pointer w-full text-center flex items-center justify-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                    Pay via UPI App
+                  </a>
+                </div>
+
+                <div className="bg-[#FAF6F0]/50 p-4 border-t border-[#E5DED4] flex justify-between items-center gap-3">
+                  <button
+                    onClick={() => setPaymentStep('select')}
+                    className="bg-white border border-[#D1C7BD] text-[#0B1226] font-bold px-4 py-2.5 rounded-lg hover:bg-[#FAF6F0] text-xs uppercase tracking-wider font-label-caps cursor-pointer"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => handleProcessPayment()}
+                    className="bg-[#ffa630] text-[#0B1226] font-bold px-6 py-2.5 rounded-lg hover:brightness-105 active:scale-95 transition-all text-xs uppercase tracking-wider font-label-caps cursor-pointer flex-grow flex items-center justify-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">verified</span>
+                    Confirm Payment
                   </button>
                 </div>
               </>
