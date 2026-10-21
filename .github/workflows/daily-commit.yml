@@ -1,4 +1,4 @@
-name: Daily commit public export
+name: Daily public export
 
 on:
   schedule:
@@ -6,12 +6,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  export:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: true
           fetch-depth: 0
 
       - name: Make script executable
@@ -22,14 +21,9 @@ jobs:
         run: |
           tools/make_public_zip.sh
 
-      - name: Commit and push export
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public_export_*.zip || true
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          git commit -m "Daily: update public export"
-          git push
+      - name: Upload export artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-export-${{ github.sha }}
+          path: public_export_*.zip
+          retention-days: 14

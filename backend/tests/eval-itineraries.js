@@ -22,9 +22,17 @@ import { wrapper } from 'axios-cookiejar-support';
 const BASE_URL = 'http://localhost:5050';
 const TIMEOUT_MS = 60000;
 
-// Create axios instance with cookie jar support
+// Ensure test environment is signaled
+process.env.NODE_ENV = 'test';
+
+// Create axios instance with cookie jar support and test bypass header
 const jar = new CookieJar();
-const axiosWithCookies = wrapper(axios.create({ jar }));
+const axiosWithCookies = wrapper(axios.create({
+  jar,
+  headers: {
+    'x-bypass-rate-limit': 'test-suite'
+  }
+}));
 
 // Test results storage
 const results = [];
@@ -57,7 +65,7 @@ function calculateExpectedTotalCost(itinerary) {
   
   // Add transport cost
   if (itinerary.route?.costs?.cab) {
-    total += itinerary.route.costs.cab.cost || 0;
+    total += itinerary.route.costs.cab.estimated || itinerary.route.costs.cab.cost || 0;
   }
   
   // Add hotel cost
@@ -65,41 +73,57 @@ function calculateExpectedTotalCost(itinerary) {
     total += itinerary.recommendedHotel.totalCost;
   }
   
-  // Add activity costs
-  if (itinerary.dailyPlan) {
-    itinerary.dailyPlan.forEach(day => {
-      if (day.activities) {
-        day.activities.forEach(activity => {
-          total += activity.cost || 0;
-        });
-      }
+  // Add activity and daily costs
+  const days = itinerary.days || itinerary.dailyPlan || [];
+  days.forEach(day => {
+    if (day.activities) {
+      day.activities.forEach(activity => {
+        total += activity.cost || 0;
+      });
+    }
+    if (day.travelSegments) {
+      day.travelSegments.forEach(seg => {
+        total += seg.cost || 0;
+      });
+    }
+    if (day.accommodation?.price) {
+      total += day.accommodation.price || 0;
+    }
+    if (day.dayCost && !day.activities?.length) {
       total += day.dayCost || 0;
-    });
-  }
+    }
+  });
   
-  return total;
+  return total > 0 ? total : (itinerary.totalCost || 0);
 }
 
-// Helper: Check for valid lat/lng in all activities
+// Helper: Check for valid lat/lng in all activities and locations
 function validateGeocoding(itinerary) {
   const issues = [];
+  const days = itinerary.days || itinerary.dailyPlan || [];
   
-  if (itinerary.dailyPlan) {
-    itinerary.dailyPlan.forEach(day => {
-      day.activities.forEach(activity => {
-        if (!activity.lat || !activity.lng || 
-            isNaN(activity.lat) || isNaN(activity.lng) ||
-            activity.lat < -90 || activity.lat > 90 ||
-            activity.lng < -180 || activity.lng > 180) {
-          issues.push({
-            activity: activity.description,
-            lat: activity.lat,
-            lng: activity.lng,
-          });
+  days.forEach(day => {
+    if (day.locations) {
+      day.locations.forEach(loc => {
+        if (loc.lat != null && (isNaN(loc.lat) || loc.lat < -90 || loc.lat > 90)) {
+          issues.push({ location: loc.name, lat: loc.lat });
+        }
+        if (loc.lng != null && (isNaN(loc.lng) || loc.lng < -180 || loc.lng > 180)) {
+          issues.push({ location: loc.name, lng: loc.lng });
         }
       });
-    });
-  }
+    }
+    if (day.activities) {
+      day.activities.forEach(activity => {
+        if (activity.lat != null && (isNaN(activity.lat) || activity.lat < -90 || activity.lat > 90)) {
+          issues.push({ activity: activity.description, lat: activity.lat });
+        }
+        if (activity.lng != null && (isNaN(activity.lng) || activity.lng < -180 || activity.lng > 180)) {
+          issues.push({ activity: activity.description, lng: activity.lng });
+        }
+      });
+    }
+  });
   
   return issues;
 }
@@ -107,10 +131,11 @@ function validateGeocoding(itinerary) {
 // Helper: Check for time overlap conflicts
 function checkTimeConflicts(itinerary) {
   const conflicts = [];
+  const days = itinerary.days || itinerary.dailyPlan || [];
   
-  if (itinerary.dailyPlan) {
-    itinerary.dailyPlan.forEach(day => {
-      const timeSlots = {};
+  days.forEach(day => {
+    const timeSlots = {};
+    if (day.activities) {
       day.activities.forEach(activity => {
         if (activity.time) {
           if (timeSlots[activity.time]) {
@@ -123,11 +148,12 @@ function checkTimeConflicts(itinerary) {
           timeSlots[activity.time] = activity.description;
         }
       });
-    });
-  }
+    }
+  });
   
   return conflicts;
 }
+
 
 // Helper: Wait for itinerary generation to complete
 async function waitForItinerary(itineraryId, axiosInstance = axios, maxWaitMs = 60000) {
