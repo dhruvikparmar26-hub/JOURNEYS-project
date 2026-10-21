@@ -19,18 +19,14 @@ node_modules/
 .env
 .env.*
 
+
 # Local env files
+.env
+.env.*
 backend/.env
 backend/.env.*
 frontend/.env
 frontend/.env.*
-
-# Archives and packages
-*.zip
-*.tar.gz
-*.tgz
-*.rar
-*.7z
 
 # Editor and OS files
 .vscode/*
@@ -42,3 +38,5 @@ frontend/.env.*
 *.njsproj
 *.sln
 *.sw?
+*.docx
+generate_report.py

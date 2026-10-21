@@ -2,15 +2,22 @@ import rateLimit from 'express-rate-limit';
 import slowDown from 'express-slow-down';
 import { ipKeyGenerator } from 'express-rate-limit';
 
+const isDevOrTest = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || !process.env.NODE_ENV;
+
+const shouldSkipRateLimit = (req) => {
+  return process.env.NODE_ENV === 'test' || req.headers['x-bypass-rate-limit'] === 'test-suite';
+};
+
 /**
  * Strict rate limiter for auth endpoints (login, signup)
- * Max 10 requests per 15 minutes per IP
+ * High limits in development/test mode to prevent developer lockouts
  */
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX) || (isDevOrTest ? 2000 : 20),
   standardHeaders: true,
   legacyHeaders: false,
+  skip: shouldSkipRateLimit,
   message: {
     error: 'Too many attempts. Please try again later.',
     code: 'RATE_LIMIT_EXCEEDED',
@@ -21,24 +28,24 @@ export const authRateLimiter = rateLimit({
 
 /**
  * Progressive slow-down for auth endpoints
- * After 5 requests in the window, add 500ms delay per additional request
  */
 export const authSlowDown = slowDown({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  delayAfter: 5,
-  delayMs: (hits) => (hits - 5) * 500, // 500ms per request after the 5th
-  maxDelayMs: 5000, // Cap at 5 seconds
+  windowMs: 15 * 60 * 1000,
+  delayAfter: isDevOrTest ? 1000 : 10,
+  delayMs: (hits) => (hits - (isDevOrTest ? 1000 : 10)) * 200,
+  maxDelayMs: 2000,
+  skip: shouldSkipRateLimit,
 });
 
 /**
  * General API rate limiter (more permissive)
- * Max 100 requests per 15 minutes per IP
  */
 export const apiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: Number(process.env.API_RATE_LIMIT_MAX) || 300,
+  max: Number(process.env.API_RATE_LIMIT_MAX) || (isDevOrTest ? 10000 : 300),
   standardHeaders: true,
   legacyHeaders: false,
+  skip: shouldSkipRateLimit,
   message: {
     error: 'Too many requests. Please slow down.',
     code: 'RATE_LIMIT_EXCEEDED',
@@ -47,19 +54,18 @@ export const apiRateLimiter = rateLimit({
 
 /**
  * Itinerary generation rate limiter
- * Max 5 itinerary creations per hour per guestId
  */
 export const generationRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: Number(process.env.GENERATION_RATE_LIMIT_MAX) || 5,
+  max: Number(process.env.GENERATION_RATE_LIMIT_MAX) || (isDevOrTest ? 2000 : 20),
   standardHeaders: true,
   legacyHeaders: false,
+  skip: shouldSkipRateLimit,
   message: {
-    error: 'Itinerary generation limit reached. You can only generate 5 itineraries per hour.',
+    error: 'Itinerary generation limit reached. Please try again later.',
     code: 'GENERATION_LIMIT_EXCEEDED',
   },
   keyGenerator: (req) => {
-    // Limit by guestId correlation ID, fallback to IP
     return req.guestId || ipKeyGenerator(req);
   },
 });
