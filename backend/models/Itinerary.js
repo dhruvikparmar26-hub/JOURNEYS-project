@@ -34,6 +34,8 @@ const daySchema = new mongoose.Schema(
         currency: { type: String, default: 'INR' },
         category: { type: String, enum: ['sightseeing', 'food', 'adventure', 'shopping', 'culture', 'transport', 'rest', 'other'], default: 'other' },
         image: { type: String, default: '' },
+        lat: { type: Number },
+        lng: { type: Number },
       },
     ],
     travelSegments: [
@@ -116,7 +118,7 @@ const itinerarySchema = new mongoose.Schema(
     // ─── Status ────────────────────────────────────────────────
     status: {
       type: String,
-      enum: ['draft', 'generating', 'generated', 'saved', 'booked'],
+      enum: ['draft', 'generating', 'generated', 'saved', 'booked', 'failed'],
       default: 'draft',
     },
 
