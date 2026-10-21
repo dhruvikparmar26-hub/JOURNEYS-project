@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // ─── Auth Modal State ──────────────────────────────────────────
+  
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMessage, setAuthModalMessage] = useState('');
   const [postAuthCallback, setPostAuthCallback] = useState(null);
