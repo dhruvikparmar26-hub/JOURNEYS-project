@@ -14,7 +14,7 @@ router.get('/', requireAuth, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(50);
 
-    return res.status(200).json({ notifications });
+    return res.status(200).json({ success: true, notifications });
   } catch (error) {
     console.error('Get notifications error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -39,7 +39,7 @@ router.patch('/:id/read', requireAuth, async (req, res) => {
     notification.read = true;
     await notification.save();
 
-    return res.status(200).json({ notification });
+    return res.status(200).json({ success: true, notification });
   } catch (error) {
     console.error('Mark notification read error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -57,7 +57,7 @@ router.patch('/read-all', requireAuth, async (req, res) => {
       { read: true }
     );
 
-    return res.status(200).json({ message: 'All notifications marked as read' });
+    return res.status(200).json({ success: true, message: 'All notifications marked as read' });
   } catch (error) {
     console.error('Mark all notifications read error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -82,7 +82,7 @@ router.post('/', requireAuth, async (req, res) => {
       priority: priority || 'normal',
       category: category || 'system'
     });
-    return res.status(201).json({ notification });
+    return res.status(201).json({ success: true, notification });
   } catch (error) {
     console.error('Create notification error:', error);
     return res.status(500).json({ error: 'Internal server error' });

@@ -11,7 +11,11 @@ export const canAccessOwnedDocument = (req, doc) => {
     return true;
   }
 
-  return Boolean(!userId && req.guestId && doc.guestId === req.guestId);
+  if (req.guestId && doc.guestId && doc.guestId === req.guestId) {
+    return true;
+  }
+
+  return false;
 };
 
 export const getOwnerFields = (req) => {

@@ -61,39 +61,11 @@ function sleep(ms) {
 
 // Helper: Calculate expected total cost from itinerary
 function calculateExpectedTotalCost(itinerary) {
-  let total = 0;
-  
-  // Add transport cost
-  if (itinerary.route?.costs?.cab) {
-    total += itinerary.route.costs.cab.estimated || itinerary.route.costs.cab.cost || 0;
-  }
-  
-  // Add hotel cost
-  if (itinerary.recommendedHotel?.totalCost) {
-    total += itinerary.recommendedHotel.totalCost;
-  }
-  
-  // Add activity and daily costs
   const days = itinerary.days || itinerary.dailyPlan || [];
+  let total = 0;
   days.forEach(day => {
-    if (day.activities) {
-      day.activities.forEach(activity => {
-        total += activity.cost || 0;
-      });
-    }
-    if (day.travelSegments) {
-      day.travelSegments.forEach(seg => {
-        total += seg.cost || 0;
-      });
-    }
-    if (day.accommodation?.price) {
-      total += day.accommodation.price || 0;
-    }
-    if (day.dayCost && !day.activities?.length) {
-      total += day.dayCost || 0;
-    }
+    total += day.dayCost || 0;
   });
-  
   return total > 0 ? total : (itinerary.totalCost || 0);
 }
 
@@ -162,10 +134,10 @@ async function waitForItinerary(itineraryId, axiosInstance = axios, maxWaitMs = 
   while (Date.now() - startTime < maxWaitMs) {
     try {
       const response = await axiosInstance.get(`${BASE_URL}/api/itineraries/${itineraryId}`);
-      if (response.data.status === 'generated' || response.data.status === 'draft') {
+      if (response.data.status === 'generated') {
         return response.data;
       }
-      await sleep(2000);
+      await sleep(1500);
     } catch (error) {
       // Continue waiting if not found yet
       await sleep(2000);

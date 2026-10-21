@@ -89,9 +89,9 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Backdrop without blur */}
       <div
-        className="fixed inset-0 bg-[#0b0e14]/50 backdrop-blur-md transition-opacity duration-300 animate-fade-in"
+        className="fixed inset-0 bg-[#0B1226]/25 transition-opacity duration-300 animate-fade-in"
         onClick={onClose}
       />
 

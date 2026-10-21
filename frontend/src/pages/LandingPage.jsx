@@ -28,39 +28,49 @@ const LandingPage = () => {
 
   return (
     <LandingLayout>
-      {/* 2FA Modal Prompt (Image 4 style) */}
+      {/* Non-intrusive Floating 2FA Prompt Card */}
       {show2FAPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full border border-[#E5DED4] shadow-2xl text-center space-y-6 mx-4">
-            <div className="w-12 h-12 rounded-full bg-[#FAF6F0] flex items-center justify-center text-primary mx-auto">
-              <span className="material-symbols-outlined text-2xl text-[#ffa630]">lock</span>
+        <div className="fixed bottom-6 right-6 z-40 max-w-sm w-full mx-4 sm:mx-0 animate-fade-in">
+          <div className="bg-white rounded-2xl p-5 border border-[#ffa630]/30 shadow-[0_16px_40px_rgba(11,18,38,0.18)] flex items-start gap-4 relative">
+            <button
+              onClick={() => {
+                sessionStorage.setItem('hasPrompted2FA', 'true');
+                setShow2FAPrompt(false);
+              }}
+              className="absolute top-3 right-3 text-outline hover:text-[#0B1226] p-1 cursor-pointer transition-colors"
+              aria-label="Dismiss 2FA prompt"
+            >
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+            <div className="w-10 h-10 rounded-xl bg-[#ffa630]/15 flex items-center justify-center text-[#ffa630] flex-shrink-0">
+              <span className="material-symbols-outlined text-xl">shield_lock</span>
             </div>
-            <div className="space-y-2">
-              <h3 className="font-display-lg text-xl text-[#0B1226]">Secure your account?</h3>
-              <p className="text-sm text-on-surface-variant leading-relaxed">
-                Enable two-factor authentication to keep your travel plans and personal data safe.
+            <div className="space-y-1 pr-4">
+              <h4 className="font-bold text-xs text-[#0B1226] uppercase tracking-wider font-label-caps">Secure Your Account</h4>
+              <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                Protect your bookings and saved trips with Two-Factor Authentication.
               </p>
-            </div>
-            <div className="space-y-3 pt-2">
-              <button
-                onClick={() => {
-                  sessionStorage.setItem('hasPrompted2FA', 'true');
-                  setShow2FAPrompt(false);
-                  navigate('/settings/2fa');
-                }}
-                className="w-full bg-[#ffa630] text-[#0B1226] py-3 rounded-full font-bold hover:brightness-105 active:scale-95 transition-all shadow-md cursor-pointer font-label-caps text-xs uppercase tracking-wider"
-              >
-                Set up 2FA now
-              </button>
-              <button
-                onClick={() => {
-                  sessionStorage.setItem('hasPrompted2FA', 'true');
-                  setShow2FAPrompt(false);
-                }}
-                className="w-full text-outline-variant py-2 rounded-full font-bold hover:bg-[#FAF6F0] transition-all cursor-pointer font-label-caps text-[10px] uppercase tracking-widest"
-              >
-                Skip for now
-              </button>
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    sessionStorage.setItem('hasPrompted2FA', 'true');
+                    setShow2FAPrompt(false);
+                    navigate('/settings/2fa');
+                  }}
+                  className="bg-[#ffa630] text-[#0B1226] px-3.5 py-1.5 rounded-lg font-bold hover:brightness-105 active:scale-95 text-[10px] uppercase tracking-wider font-label-caps shadow-sm cursor-pointer transition-all"
+                >
+                  Set up now
+                </button>
+                <button
+                  onClick={() => {
+                    sessionStorage.setItem('hasPrompted2FA', 'true');
+                    setShow2FAPrompt(false);
+                  }}
+                  className="text-outline hover:text-[#0B1226] px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider font-label-caps cursor-pointer transition-colors"
+                >
+                  Later
+                </button>
+              </div>
             </div>
           </div>
         </div>

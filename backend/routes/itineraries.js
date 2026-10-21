@@ -164,20 +164,24 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
           const vt = vehicleType.toLowerCase();
           if (vt === 'plane' || vt === 'flight') {
             chosenMode = 'flight';
-            chosenCost = Math.round(distance * 8 + 2000);
+            chosenCost = Math.max(1800, Math.round(1800 + distance * 2.4));
             chosenDuration = Math.round((distance / 700) * 60) + 60;
           } else if (vt === 'bus') {
             chosenMode = 'bus';
-            chosenCost = Math.round(distance * 3);
+            chosenCost = Math.max(60, Math.round(distance * 1.5));
             chosenDuration = Math.round((distance / 50) * 60);
           } else if (vt === 'bike') {
             chosenMode = 'bike';
-            chosenCost = Math.round(distance * 1.5);
-            chosenDuration = Math.round((distance / 40) * 60);
-          } else if (vt === 'car') {
+            chosenCost = Math.max(40, Math.round(distance * 1.8));
+            chosenDuration = Math.round((distance / 45) * 60);
+          } else if (vt === 'car' || vt === 'cab') {
             chosenMode = 'car';
-            chosenCost = Math.round(distance * 10);
-            chosenDuration = Math.round((distance / 70) * 60);
+            chosenCost = Math.max(200, Math.round(distance * 7.5 + 80));
+            chosenDuration = Math.round((distance / 65) * 60);
+          } else if (vt === 'train') {
+            chosenMode = 'train';
+            chosenCost = Math.max(80, Math.round(distance * 0.9 + 50));
+            chosenDuration = Math.round((distance / 60) * 60);
           }
         } else {
           if (distance > 500) {
@@ -190,18 +194,31 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
               chosenCost = result.itinerary.route.costs.train.ac3.estimated;
               chosenDuration = Math.round(distance / 60 * 60);
             }
-          } else if (distance > 250) {
+          } else if (distance > 200) {
             if (result.itinerary.route?.costs?.train?.ac3?.estimated) {
               chosenMode = 'train';
               chosenCost = result.itinerary.route.costs.train.ac3.estimated;
               chosenDuration = Math.round(distance / 60 * 60);
+            } else if (result.itinerary.route?.costs?.bus?.AC?.estimated) {
+              chosenMode = 'bus';
+              chosenCost = result.itinerary.route.costs.bus.AC.estimated;
+              chosenDuration = Math.round(distance / 50 * 60);
             }
+          } else {
+            // Regional / short distance trips (< 200 km, e.g. Ahmedabad to Godhra)
+            chosenMode = 'car';
+            chosenCost = Math.max(180, Math.round(distance * 7 + 50));
+            chosenDuration = Math.round((distance / 60) * 60);
           }
         }
+
+        const hotelCostPerNight = result.itinerary.recommendedHotel?.price || 0;
+        const totalDays = result.itinerary.dailyPlan.length;
 
         const days = result.itinerary.dailyPlan.map((day, index) => {
           const isDepartureDay = index === 0;
           const isReturnDay = index === result.itinerary.dailyPlan.length - 1;
+          const hasHotelNight = index < totalDays - 1;
 
           const dayLocations = [];
           if (result.itinerary.recommendedHotel?.location) {
@@ -229,6 +246,15 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
             dayNumber: day.dayNumber,
             title: `Day ${day.dayNumber}`,
             locations: dayLocations,
+            accommodation: (hasHotelNight && result.itinerary.recommendedHotel)
+              ? {
+                  name: result.itinerary.recommendedHotel.name,
+                  address: result.itinerary.recommendedHotel.address || result.itinerary.recommendedHotel.name,
+                  price: hotelCostPerNight,
+                  rating: result.itinerary.recommendedHotel.rating || 4.5,
+                  type: 'hotel',
+                }
+              : undefined,
             activities: day.activities.map((activity) => ({
               time: activity.time,
               description: `${activity.name} (${activity.type})`,
@@ -269,17 +295,13 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
                 ]
               : [],
             dayCost: day.activities.reduce((sum, act) => sum + (act.cost || 0), 0) + 
-              ((isDepartureDay || isReturnDay) ? chosenCost : 0),
+              ((isDepartureDay || isReturnDay) ? chosenCost : 0) +
+              (hasHotelNight ? hotelCostPerNight : 0),
           };
         });
 
-        // Compute updated total cost including accommodation and activities
-        const hotelCostPerNight = result.itinerary.recommendedHotel?.price || 0;
-        const totalDays = result.itinerary.dailyPlan.length;
-        const hotelNights = Math.max(0, totalDays - 1);
-        const activitiesCostSum = days.reduce((sum, d) => sum + d.activities.reduce((aSum, a) => aSum + (a.cost || 0), 0), 0);
-        const transitCostSum = 2 * chosenCost;
-        const recalculatedTotalCost = activitiesCostSum + transitCostSum + (hotelCostPerNight * hotelNights);
+        // Compute updated total cost
+        const recalculatedTotalCost = days.reduce((sum, d) => sum + (d.dayCost || 0), 0);
 
         await Itinerary.findByIdAndUpdate(itineraryId, {
           status: 'generated',
@@ -369,6 +391,9 @@ router.get('/:id/stream', optionalAuth, guestSession, async (req, res) => {
       }
 
       if (!canAccessOwnedDocument(req, itinerary)) {
+        if (!getUserId(req) && itinerary.userId) {
+          return res.status(401).json({ error: 'Authentication required to access this itinerary' });
+        }
         return res.status(403).json({ error: 'You do not have access to this itinerary' });
       }
 
@@ -482,6 +507,9 @@ router.get('/:id', optionalAuth, guestSession, async (req, res) => {
     }
 
     if (!canAccessOwnedDocument(req, itinerary)) {
+      if (!getUserId(req) && itinerary.userId) {
+        return res.status(401).json({ error: 'Authentication required to access this itinerary' });
+      }
       return res.status(403).json({ error: 'You do not have access to this itinerary' });
     }
 

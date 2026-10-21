@@ -304,7 +304,7 @@ const DashboardPage = () => {
                 </div>
               </div>
               <div className="bg-white/5 px-6 py-3 border-t border-white/5 flex justify-between items-center text-[10px] text-white/40">
-                <span>PROGRESS: {Math.min(Math.round((logIndex / simulatedLogs.length) * 100), 100)}%</span>
+                <span>PROGRESS: {Math.min(Math.round((logIndex / SIMULATED_LOGS.length) * 100), 100)}%</span>
                 <span className="font-mono">LAT: 28.6139 N | LON: 77.2090 E</span>
               </div>
             </div>
@@ -533,7 +533,7 @@ const DashboardPage = () => {
         </form>
 
         {activeSearch && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-[#0B1226]/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-white rounded-2xl w-full max-w-md p-6 border border-[#E5DED4] shadow-2xl relative space-y-4">
               <div className="flex justify-between items-center pb-2 border-b border-[#FAF6F0]">
                 <h3 className="font-bold text-sm text-[#0B1226] uppercase">

@@ -258,19 +258,19 @@ const fetchRealAttractions = async (lat, lng, cityName) => {
       const lower = p.title.toLowerCase();
       if (!bannedKeywords.some(b => lower.includes(b)) && p.title.length < 50) {
         let type = 'attraction';
-        let cost = 300;
+        let cost = 30;
         if (lower.includes('museum') || lower.includes('gallery')) {
           type = 'museum';
-          cost = 400;
+          cost = 50;
         } else if (lower.includes('temple') || lower.includes('cathedral') || lower.includes('church') || lower.includes('shrine') || lower.includes('mosque')) {
           type = 'culture';
-          cost = 100;
+          cost = 0;
         } else if (lower.includes('park') || lower.includes('garden') || lower.includes('beach') || lower.includes('lake') || lower.includes('falls')) {
           type = 'nature';
           cost = 0;
         } else if (lower.includes('palace') || lower.includes('fort') || lower.includes('castle') || lower.includes('tower')) {
           type = 'monument';
-          cost = 500;
+          cost = 100;
         }
         addAttraction(p.title, p.lat, p.lon, type, cost, '2h');
       }
@@ -296,7 +296,7 @@ const fetchRealAttractions = async (lat, lng, cityName) => {
             el.lat || el.center?.lat || lat,
             el.lon || el.center?.lon || lng,
             el.tags.tourism || 'attraction',
-            el.tags.fee === 'no' ? 0 : 250,
+            el.tags.fee === 'no' ? 0 : 50,
             '2h'
           );
         }
@@ -310,13 +310,13 @@ const fetchRealAttractions = async (lat, lng, cityName) => {
   if (attractions.length < 6) {
     const authenticLocalSpots = [
       { name: `${cityName} Old Town & Heritage Center`, type: 'culture', cost: 0, duration: '2h', dLat: 0.003, dLng: 0.002 },
-      { name: `${cityName} Cultural & Art Museum`, type: 'museum', cost: 350, duration: '2.5h', dLat: -0.004, dLng: 0.005 },
+      { name: `${cityName} Cultural & Art Museum`, type: 'museum', cost: 50, duration: '2h', dLat: -0.004, dLng: 0.005 },
       { name: `${cityName} Grand Scenic Viewpoint & Promenade`, type: 'nature', cost: 0, duration: '1.5h', dLat: 0.007, dLng: -0.003 },
-      { name: `${cityName} Historic Bazaar & Artisan Quarter`, type: 'shopping', cost: 500, duration: '2h', dLat: -0.002, dLng: -0.006 },
-      { name: `Flavors of ${cityName} Traditional Dining`, type: 'food', cost: 800, duration: '1.5h', dLat: 0.001, dLng: 0.004 },
-      { name: `${cityName} Waterfront & Botanical Gardens`, type: 'nature', cost: 150, duration: '2h', dLat: -0.006, dLng: 0.002 },
-      { name: `${cityName} Royal Palace & Fortress`, type: 'monument', cost: 450, duration: '2.5h', dLat: 0.005, dLng: 0.006 },
-      { name: `${cityName} Evening Food Market`, type: 'food', cost: 600, duration: '2h', dLat: -0.003, dLng: -0.002 }
+      { name: `${cityName} Historic Bazaar & Artisan Quarter`, type: 'shopping', cost: 0, duration: '2h', dLat: -0.002, dLng: -0.006 },
+      { name: `Flavors of ${cityName} Traditional Dining`, type: 'food', cost: 250, duration: '1.5h', dLat: 0.001, dLng: 0.004 },
+      { name: `${cityName} Waterfront & Botanical Gardens`, type: 'nature', cost: 20, duration: '2h', dLat: -0.006, dLng: 0.002 },
+      { name: `${cityName} Royal Palace & Fortress`, type: 'monument', cost: 100, duration: '2.5h', dLat: 0.005, dLng: 0.006 },
+      { name: `${cityName} Evening Food Market`, type: 'food', cost: 150, duration: '2h', dLat: -0.003, dLng: -0.002 }
     ];
 
     authenticLocalSpots.forEach(spot => {
@@ -329,9 +329,32 @@ const fetchRealAttractions = async (lat, lng, cityName) => {
 
 // ─── Real Hotels Discovery ──────────────────────────────────────────
 
-const fetchRealHotels = async (lat, lng, cityName, budgetPerNight) => {
+const getRealisticCityHotelBase = (cityName, requestedBudgetMax, tripDays) => {
+  const c = (cityName || '').toLowerCase();
+  const metroCities = ['mumbai', 'delhi', 'bangalore', 'bengaluru', 'goa', 'dubai', 'singapore', 'london', 'paris', 'new york'];
+  const tier2Cities = ['ahmedabad', 'jaipur', 'chennai', 'hyderabad', 'kolkata', 'pune', 'udaipur', 'kochi', 'chandigarh', 'agra', 'amritsar', 'surat', 'vadodara'];
+
+  let base = 1200; // Tier-3 regional cities and towns (e.g. Godhra, Anand, Bharuch, Mehsana)
+  if (metroCities.some(m => c.includes(m))) {
+    base = 2800; // Metros
+  } else if (tier2Cities.some(t => c.includes(t))) {
+    base = 1800; // Tier 2
+  }
+
+  if (requestedBudgetMax && tripDays > 0) {
+    const userPerNight = requestedBudgetMax / tripDays;
+    if (userPerNight < base) {
+      base = Math.max(700, Math.round(userPerNight * 0.75));
+    }
+  }
+
+  return base;
+};
+
+const fetchRealHotels = async (lat, lng, cityName, budgetPerNight, requestedBudgetMax, tripDays) => {
   const hotels = [];
   const seen = new Set();
+  const realisticBase = getRealisticCityHotelBase(cityName, requestedBudgetMax, tripDays);
 
   const addHotel = (name, hLat, hLng, rating, price, description) => {
     if (!name || seen.has(name.toLowerCase())) return;
@@ -339,13 +362,13 @@ const fetchRealHotels = async (lat, lng, cityName, budgetPerNight) => {
     hotels.push({
       name,
       rating: rating || Number((4.2 + Math.random() * 0.7).toFixed(1)),
-      pricePerNight: Math.max(1500, Math.round(price || budgetPerNight * 0.8)),
+      pricePerNight: Math.max(700, Math.round(price || realisticBase * (0.9 + Math.random() * 0.25))),
       location: {
         lat: hLat || lat,
         lng: hLng || lng,
       },
-      amenities: ['wifi', 'breakfast', 'restaurant', 'pool', 'gym'].filter(() => Math.random() > 0.35),
-      description: description || `Premium luxury stay located in central ${cityName}.`,
+      amenities: ['wifi', 'breakfast', 'restaurant', 'air_conditioning'].filter(() => Math.random() > 0.35),
+      description: description || `Comfortable, verified stay located in central ${cityName}.`,
     });
   };
 
@@ -359,8 +382,8 @@ const fetchRealHotels = async (lat, lng, cityName, budgetPerNight) => {
         const hLat = parseFloat(item.lat);
         const hLng = parseFloat(item.lon);
         if (cleanName && !isNaN(hLat) && !isNaN(hLng)) {
-          const price = Math.round(budgetPerNight * (0.7 + Math.random() * 0.5));
-          addHotel(cleanName, hLat, hLng, 4.6, price, `Authentic hospitality in ${cityName}.`);
+          const price = Math.round(realisticBase * (0.85 + Math.random() * 0.3));
+          addHotel(cleanName, hLat, hLng, 4.5, price, `Authentic hospitality in ${cityName}.`);
         }
       });
     }
@@ -378,12 +401,12 @@ const fetchRealHotels = async (lat, lng, cityName, budgetPerNight) => {
       const osmData = await safeGet(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(hotelQuery)}`);
       osmData?.elements?.forEach((el) => {
         if (el.tags?.name) {
-          const price = Math.round(budgetPerNight * (0.65 + Math.random() * 0.6));
+          const price = Math.round(realisticBase * (0.85 + Math.random() * 0.3));
           addHotel(
             el.tags.name,
             el.lat || el.center?.lat || lat,
             el.lon || el.center?.lon || lng,
-            4.5,
+            4.4,
             price,
             el.tags.description || `Centrally situated hotel in ${cityName}.`
           );
@@ -394,17 +417,17 @@ const fetchRealHotels = async (lat, lng, cityName, budgetPerNight) => {
     }
   }
 
-  // 3. Fallback: Distinctive, verified local luxury accommodations positioned exactly in the city
+  // 3. Fallback: Distinctive, verified local accommodations positioned exactly in the city
   if (hotels.length < 3) {
     const localTemplates = [
-      { name: `The Grand ${cityName} Palace & Suites`, rating: 4.8, mult: 1.1, dLat: 0.003, dLng: 0.004 },
-      { name: `Heritage Boutique Hotel ${cityName}`, rating: 4.7, mult: 0.9, dLat: -0.002, dLng: 0.003 },
-      { name: `${cityName} Central Luxury Resort`, rating: 4.6, mult: 0.8, dLat: 0.005, dLng: -0.002 },
-      { name: `The Waterfront Retreat ${cityName}`, rating: 4.5, mult: 0.7, dLat: -0.004, dLng: -0.005 },
+      { name: `Hotel ${cityName} Heritage & Comfort`, rating: 4.6, mult: 1.05, dLat: 0.003, dLng: 0.004 },
+      { name: `The Central Residency ${cityName}`, rating: 4.5, mult: 0.95, dLat: -0.002, dLng: 0.003 },
+      { name: `${cityName} Grand Inn`, rating: 4.4, mult: 0.85, dLat: 0.005, dLng: -0.002 },
+      { name: `Park View Hotel ${cityName}`, rating: 4.3, mult: 0.8, dLat: -0.004, dLng: -0.005 },
     ];
 
     localTemplates.forEach((tmpl) => {
-      const price = Math.max(2000, Math.round(budgetPerNight * tmpl.mult));
+      const price = Math.max(700, Math.round(realisticBase * tmpl.mult));
       addHotel(
         tmpl.name,
         lat + tmpl.dLat,
@@ -527,7 +550,7 @@ const hotelAgent = async (state) => {
     message: `Searching real verified hotels in ${cityName}...`,
   });
 
-  const hotels = await fetchRealHotels(lat, lng, cityName, budgetPerNight);
+  const hotels = await fetchRealHotels(lat, lng, cityName, budgetPerNight, tripRequest.budgetMax, tripDays);
 
   const formattedHotels = hotels.map(h => ({
     name: h.name,

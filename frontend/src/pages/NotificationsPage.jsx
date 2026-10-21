@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import LandingLayout from '../components/ui/LandingLayout.jsx';
 import api from '../utils/api.js';
 import { useToast } from '../components/ui/Toast.jsx';
 
 const NotificationsPage = () => {
+  const navigate = useNavigate();
   const { success: showSuccessToast, error: showErrorToast } = useToast();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [limit, setLimit] = useState(15);
+
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
@@ -24,12 +28,15 @@ const NotificationsPage = () => {
     fetchNotifications();
   }, [showErrorToast]);
 
-  const handleMarkRead = async (id) => {
+  const handleMarkRead = async (id, relatedItineraryId) => {
     try {
       const { data } = await api.patch(`/notifications/${id}/read`);
       setNotifications(prev => 
         prev.map(n => n._id === id ? data.notification : n)
       );
+      if (relatedItineraryId) {
+        navigate(`/itinerary/${relatedItineraryId}`);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -103,7 +110,7 @@ const NotificationsPage = () => {
             {notifications.slice(0, limit).map((n) => (
               <div
                 key={n._id}
-                onClick={() => !n.read && handleMarkRead(n._id)}
+                onClick={() => handleMarkRead(n._id, n.relatedItineraryId)}
                 className={`bg-white rounded-xl p-5 border border-[#E5DED4] shadow-sm transition-all relative flex items-start gap-4 cursor-pointer hover:border-primary-container ${!n.read ? 'ring-1 ring-primary/10' : 'opacity-85'}`}
               >
                 {/* Unread status dot */}

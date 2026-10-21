@@ -38,6 +38,9 @@ router.get('/:itineraryId', optionalAuth, guestSession, async (req, res) => {
     const itinerary = await Itinerary.findById(req.params.itineraryId);
     if (!itinerary) return res.status(404).json({ error: 'Itinerary not found' });
     if (!canAccessOwnedDocument(req, itinerary)) {
+      if (!getUserId(req) && itinerary.userId) {
+        return res.status(401).json({ error: 'Authentication required to access this itinerary' });
+      }
       return res.status(403).json({ error: 'You do not have access to this itinerary' });
     }
 
@@ -95,6 +98,9 @@ router.post('/:itineraryId/regenerate', optionalAuth, guestSession, async (req, 
     const itinerary = await Itinerary.findById(req.params.itineraryId);
     if (!itinerary) return res.status(404).json({ error: 'Itinerary not found' });
     if (!canAccessOwnedDocument(req, itinerary)) {
+      if (!getUserId(req) && itinerary.userId) {
+        return res.status(401).json({ error: 'Authentication required to access this itinerary' });
+      }
       return res.status(403).json({ error: 'You do not have access to this itinerary' });
     }
 

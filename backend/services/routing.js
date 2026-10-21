@@ -20,12 +20,12 @@ const majorRoutes = JSON.parse(
 
 // ─── Configurable fare constants ─────────────────────────────────
 
-const CAB_BASE_FARE = Number(process.env.CAB_BASE_FARE) || 50;
-const CAB_PER_KM = Number(process.env.CAB_PER_KM_FARE) || 14;
-const BUS_NON_AC_PER_KM = Number(process.env.BUS_NON_AC_PER_KM) || 1.5;
-const BUS_AC_PER_KM = Number(process.env.BUS_AC_PER_KM) || 2.5;
-const FLIGHT_BASE_FARE = Number(process.env.FLIGHT_BASE_FARE) || 2500;
-const FLIGHT_PER_KM = Number(process.env.FLIGHT_PER_KM) || 4.5;
+const CAB_BASE_FARE = Number(process.env.CAB_BASE_FARE) || 80;
+const CAB_PER_KM = Number(process.env.CAB_PER_KM_FARE) || 8.5; // Realistic outstation cab rate (₹8.5/km)
+const BUS_NON_AC_PER_KM = Number(process.env.BUS_NON_AC_PER_KM) || 1.1; // State roadways standard
+const BUS_AC_PER_KM = Number(process.env.BUS_AC_PER_KM) || 1.7; // AC / Volvo sleeper rate
+const FLIGHT_BASE_FARE = Number(process.env.FLIGHT_BASE_FARE) || 1800;
+const FLIGHT_PER_KM = Number(process.env.FLIGHT_PER_KM) || 2.4; // Realistic Indian domestic airline rates (IndiGo/Air India)
 const FLIGHT_MIN_DISTANCE_KM = 300;
 
 // ─── Helpers ─────────────────────────────────────────────────────

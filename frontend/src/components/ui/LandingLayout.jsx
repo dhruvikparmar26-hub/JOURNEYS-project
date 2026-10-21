@@ -15,6 +15,7 @@ export const Header = () => {
   const [isSticky, setIsSticky] = useState(false);
   const [isExploreOpen, setIsExploreOpen] = useState(false);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -34,20 +35,52 @@ export const Header = () => {
       const fetchNotifications = async () => {
         try {
           const res = await api.get('/notifications');
-          if (res.data?.success) {
-            setNotifications(res.data.notifications || []);
-            setUnreadCount(res.data.notifications?.filter(n => !n.read).length || 0);
-          }
+          const notifs = res.data?.notifications || [];
+          setNotifications(notifs);
+          setUnreadCount(notifs.filter(n => !n.read).length);
         } catch (err) {
           console.error('Failed to fetch header notifications:', err);
         }
       };
       fetchNotifications();
-      // Poll every 45 seconds for real-time feel
-      const interval = setInterval(fetchNotifications, 45000);
+      // Poll every 30 seconds for real-time feel
+      const interval = setInterval(fetchNotifications, 30000);
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
+
+  const handleMarkRead = async (id, e) => {
+    e?.stopPropagation();
+    try {
+      await api.patch(`/notifications/${id}/read`);
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleMarkAllRead = async (e) => {
+    e?.stopPropagation();
+    try {
+      await api.patch('/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const formatTimeAgo = (dateStr) => {
+    const elapsed = Date.now() - new Date(dateStr).getTime();
+    const minutes = Math.floor(elapsed / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -159,11 +192,123 @@ export const Header = () => {
           {isAuthenticated ? (
             <div className="flex items-center gap-4">
               
-              {/* Notification Bell */}
-              <div className="relative cursor-pointer py-1" onClick={() => navigate('/notifications')}>
-                <span className="material-symbols-outlined text-background/80 hover:text-background text-2xl transition-colors">notifications</span>
-                {unreadCount > 0 && (
-                  <span className="notification-badge">{unreadCount}</span>
+              {/* Notification Bell with Rich Details Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNotificationOpen(!isNotificationOpen);
+                    setIsAvatarOpen(false);
+                  }}
+                  className="relative p-1.5 rounded-lg hover:bg-white/10 text-background/80 hover:text-background transition-colors cursor-pointer flex items-center justify-center"
+                  aria-label="View notifications"
+                >
+                  <span className="material-symbols-outlined text-2xl">notifications</span>
+                  {unreadCount > 0 && (
+                    <span className="bg-[#ba1a1a] text-white font-bold text-[9px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center absolute -top-1 -right-1 ring-2 ring-[#0B1226]">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown Card */}
+                {isNotificationOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setIsNotificationOpen(false)} 
+                    />
+                    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-[#E5DED4] rounded-2xl shadow-2xl z-50 overflow-hidden animate-scale-in text-[#0B1226]">
+                      {/* Header */}
+                      <div className="bg-[#FAF6F0] px-4 py-3 border-b border-[#E5DED4] flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs text-[#0B1226] uppercase tracking-wider font-label-caps">
+                            Notifications
+                          </span>
+                          {unreadCount > 0 && (
+                            <span className="bg-[#ffa630]/20 text-[#6b4000] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              {unreadCount} unread
+                            </span>
+                          )}
+                        </div>
+                        {unreadCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleMarkAllRead}
+                            className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wider font-label-caps cursor-pointer"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+
+                      {/* List */}
+                      <div className="max-h-80 overflow-y-auto divide-y divide-[#FAF6F0]">
+                        {notifications.length === 0 ? (
+                          <div className="p-8 text-center space-y-2">
+                            <span className="material-symbols-outlined text-3xl text-outline-variant">notifications_none</span>
+                            <p className="text-xs text-on-surface-variant font-medium">All caught up! No notifications yet.</p>
+                          </div>
+                        ) : (
+                          notifications.slice(0, 8).map((n) => (
+                            <div
+                              key={n._id}
+                              onClick={() => {
+                                if (!n.read) handleMarkRead(n._id);
+                                if (n.relatedItineraryId) {
+                                  setIsNotificationOpen(false);
+                                  navigate(`/itinerary/${n.relatedItineraryId}`);
+                                }
+                              }}
+                              className={`p-3.5 flex items-start gap-3 hover:bg-[#FAF6F0] transition-colors cursor-pointer relative group ${
+                                !n.read ? 'bg-[#fff5e6]/50' : 'bg-white'
+                              }`}
+                            >
+                              {/* Type Icon */}
+                              <div className="w-8 h-8 rounded-lg bg-[#FAF6F0] border border-[#E5DED4] flex items-center justify-center text-[#ffa630] shrink-0 mt-0.5">
+                                <span className="material-symbols-outlined text-base">
+                                  {n.type === 'booking_confirmed' ? 'verified' : 
+                                   n.type === 'itinerary_saved' || n.type === 'itinerary_ready' ? 'flight' : 
+                                   n.type === 'review_submitted' ? 'rate_review' : 
+                                   n.type === 'price_alert' ? 'bolt' : 'notifications'}
+                                </span>
+                              </div>
+
+                              {/* Content */}
+                              <div className="flex-1 min-w-0 pr-1">
+                                <p className={`text-xs leading-snug whitespace-pre-line line-clamp-3 ${!n.read ? 'font-bold text-[#0B1226]' : 'text-on-surface-variant'}`}>
+                                  {n.message}
+                                </p>
+                                <span className="text-[10px] text-outline font-medium mt-1 block">
+                                  {formatTimeAgo(n.createdAt)}
+                                </span>
+                              </div>
+
+                              {/* Unread indicator */}
+                              {!n.read && (
+                                <span className="w-2 h-2 rounded-full bg-[#ffa630] shrink-0 mt-1.5" />
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Footer */}
+                      <div className="bg-[#FAF6F0] p-2.5 border-t border-[#E5DED4] text-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsNotificationOpen(false);
+                            navigate('/notifications');
+                          }}
+                          className="text-[11px] font-bold text-[#0B1226] hover:text-primary transition-colors flex items-center justify-center gap-1 mx-auto py-1 font-label-caps uppercase tracking-wider cursor-pointer"
+                        >
+                          <span>Open All Notifications ({notifications.length})</span>
+                          <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
 

@@ -74,21 +74,21 @@ const runTests = async () => {
   {
     const costs = estimateCosts(500, 'all');
 
-    // Cab: 50 + 14*500 = 7050
-    assert(costs.cab?.estimated === 7050, `Cab estimate = ₹7,050 (got ₹${costs.cab?.estimated})`);
+    // Cab: 80 + 8.5*500 = 4330
+    assert(costs.cab?.estimated === 4330, `Cab estimate = ₹4,330 (got ₹${costs.cab?.estimated})`);
 
-    // Bus non-AC: 1.5 * 500 = 750
-    assert(costs.bus?.nonAC?.estimated === 750, `Bus non-AC = ₹750 (got ₹${costs.bus?.nonAC?.estimated})`);
+    // Bus non-AC: 1.1 * 500 = 550
+    assert(costs.bus?.nonAC?.estimated === 550, `Bus non-AC = ₹550 (got ₹${costs.bus?.nonAC?.estimated})`);
 
-    // Bus AC: 2.5 * 500 = 1250
-    assert(costs.bus?.AC?.estimated === 1250, `Bus AC = ₹1,250 (got ₹${costs.bus?.AC?.estimated})`);
+    // Bus AC: 1.7 * 500 = 850
+    assert(costs.bus?.AC?.estimated === 850, `Bus AC = ₹850 (got ₹${costs.bus?.AC?.estimated})`);
 
     // Train: 500km falls in band 201-500km → sleeper 250, ac3 650, ac2 900
     assert(costs.train?.sleeper?.estimated === 250, `Train Sleeper = ₹250 (got ₹${costs.train?.sleeper?.estimated})`);
     assert(costs.train?.ac3?.estimated === 650, `Train 3AC = ₹650 (got ₹${costs.train?.ac3?.estimated})`);
 
-    // Flight: 2500 + 4.5*500 = 4750
-    assert(costs.flight?.estimated === 4750, `Flight estimate = ₹4,750 (got ₹${costs.flight?.estimated})`);
+    // Flight: 1800 + 2.4*500 = 3000
+    assert(costs.flight?.estimated === 3000, `Flight estimate = ₹3,000 (got ₹${costs.flight?.estimated})`);
     assert(costs.flight?.disclaimer != null, 'Flight has a disclaimer');
   }
   console.log('');
