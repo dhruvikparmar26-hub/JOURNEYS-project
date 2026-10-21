@@ -1,4 +1,5 @@
 import axios from 'axios';
+import mongoose from 'mongoose';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -84,21 +85,27 @@ export const getRouteMatrix = async (origin, destination) => {
   const dLat = round3(destination.lat);
   const dLng = round3(destination.lng);
 
-  // 1. Check MongoDB cache first
-  const cached = await RouteCache.findOne({
-    originLatRounded: oLat,
-    originLngRounded: oLng,
-    destLatRounded: dLat,
-    destLngRounded: dLng,
-  });
+  // 1. Check MongoDB cache first if connected
+  if (mongoose.connection?.readyState === 1) {
+    try {
+      const cached = await RouteCache.findOne({
+        originLatRounded: oLat,
+        originLngRounded: oLng,
+        destLatRounded: dLat,
+        destLngRounded: dLng,
+      });
 
-  if (cached) {
-    return {
-      distanceMeters: cached.distanceMeters,
-      durationSeconds: cached.durationSeconds,
-      distanceKm: Math.round(cached.distanceMeters / 1000),
-      source: 'mongodb-cache',
-    };
+      if (cached) {
+        return {
+          distanceMeters: cached.distanceMeters,
+          durationSeconds: cached.durationSeconds,
+          distanceKm: Math.round(cached.distanceMeters / 1000),
+          source: 'mongodb-cache',
+        };
+      }
+    } catch (cacheErr) {
+      // ignore cache lookup error and proceed
+    }
   }
 
   // 2. Call OSRM API
@@ -119,15 +126,21 @@ export const getRouteMatrix = async (origin, destination) => {
     const distanceMeters = Math.round(route.distance);
     const durationSeconds = Math.round(route.duration);
 
-    // 3. Cache the result
-    await RouteCache.create({
-      originLatRounded: oLat,
-      originLngRounded: oLng,
-      destLatRounded: dLat,
-      destLngRounded: dLng,
-      distanceMeters,
-      durationSeconds,
-    });
+    // 3. Cache the result if connected
+    if (mongoose.connection?.readyState === 1) {
+      try {
+        await RouteCache.create({
+          originLatRounded: oLat,
+          originLngRounded: oLng,
+          destLatRounded: dLat,
+          destLngRounded: dLng,
+          distanceMeters,
+          durationSeconds,
+        });
+      } catch (saveErr) {
+        // ignore cache write error
+      }
+    }
 
     return {
       distanceMeters,

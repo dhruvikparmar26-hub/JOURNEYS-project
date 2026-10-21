@@ -7,24 +7,22 @@ const NotificationsPage = () => {
   const { success: showSuccessToast, error: showErrorToast } = useToast();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [limit, setLimit] = useState(15);
-
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+    const fetchNotifications = async () => {
+      try {
+        setLoading(true);
+        const { data } = await api.get('/notifications');
+        setNotifications(data.notifications || []);
+      } catch (err) {
+        console.error(err);
+        showErrorToast('Failed to load notifications.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-      const { data } = await api.get('/notifications');
-      setNotifications(data.notifications || []);
-    } catch (err) {
-      console.error(err);
-      showErrorToast('Failed to load notifications.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchNotifications();
+  }, [showErrorToast]);
 
   const handleMarkRead = async (id) => {
     try {

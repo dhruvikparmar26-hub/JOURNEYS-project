@@ -140,10 +140,14 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
       },
       ownerId
     ).then(async (result) => {
+      if (!result || !result.itinerary) {
+        throw new Error(result?.error || 'Orchestrator did not return a valid itinerary');
+      }
+
       // Update the activeGenerations with the final result
       const generation = activeGenerations.get(itineraryId);
       if (generation) {
-        generation.log = result.log;
+        generation.log = result.log || [];
         generation.status = 'completed';
         generation.itinerary = result.itinerary;
       }
@@ -199,25 +203,39 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
           const isDepartureDay = index === 0;
           const isReturnDay = index === result.itinerary.dailyPlan.length - 1;
 
+          const dayLocations = [];
+          if (result.itinerary.recommendedHotel?.location) {
+            dayLocations.push({
+              name: result.itinerary.recommendedHotel.name,
+              lat: result.itinerary.recommendedHotel.location.lat,
+              lng: result.itinerary.recommendedHotel.location.lng,
+              type: 'hotel',
+              notes: result.itinerary.recommendedHotel.description || '',
+            });
+          }
+          day.activities.forEach((act) => {
+            if (act.lat && act.lng) {
+              dayLocations.push({
+                name: act.name,
+                lat: act.lat,
+                lng: act.lng,
+                type: 'attraction',
+                notes: act.type || '',
+              });
+            }
+          });
+
           return {
             dayNumber: day.dayNumber,
             title: `Day ${day.dayNumber}`,
-            locations: result.itinerary.recommendedHotel
-              ? [
-                  {
-                    name: result.itinerary.recommendedHotel.name,
-                    lat: result.itinerary.recommendedHotel.location.lat,
-                    lng: result.itinerary.recommendedHotel.location.lng,
-                    type: 'hotel',
-                    notes: result.itinerary.recommendedHotel.description,
-                  },
-                ]
-              : [],
+            locations: dayLocations,
             activities: day.activities.map((activity) => ({
               time: activity.time,
               description: `${activity.name} (${activity.type})`,
-              cost: activity.cost,
+              cost: activity.cost || 0,
               currency: 'INR',
+              lat: activity.lat,
+              lng: activity.lng,
             })),
             travelSegments: (isDepartureDay && result.itinerary.route)
               ? [
@@ -290,7 +308,7 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
         }
 
         await Itinerary.findByIdAndUpdate(itineraryId, {
-          status: 'draft',
+          status: 'failed',
         });
       }
     }).catch(async (error) => {
@@ -304,7 +322,7 @@ router.post('/', optionalAuth, generationRateLimiter, guestSession, async (req, 
       }
 
       await Itinerary.findByIdAndUpdate(itineraryId, {
-        status: 'draft',
+        status: 'failed',
       });
     });
 

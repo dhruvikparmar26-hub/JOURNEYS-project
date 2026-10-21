@@ -10,22 +10,22 @@ const MyTrips = () => {
   const [itineraries, setItineraries] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchTrips = async () => {
-    try {
-      setLoading(true);
-      const { data } = await api.get('/itineraries/users/me/trips');
-      setItineraries(data || []);
-    } catch (err) {
-      console.error('Failed to fetch trips:', err);
-      showErrorToast('Failed to load your boarding passes.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        setLoading(true);
+        const { data } = await api.get('/itineraries/users/me/trips');
+        setItineraries(data || []);
+      } catch (err) {
+        console.error('Failed to fetch trips:', err);
+        showErrorToast('Failed to load your boarding passes.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchTrips();
-  }, []);
+  }, [showErrorToast]);
 
   if (loading) {
     return (
@@ -69,7 +69,7 @@ const MyTrips = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {itineraries.map((itinerary, idx) => {
+            {itineraries.map((itinerary) => {
               // Generate mock reference booking ID based on title
               const key = itinerary.title?.slice(0,4).toUpperCase() || 'TRIP';
               const mockBookingId = `#${key}-2026`;
